@@ -16,31 +16,31 @@ void get_user_list(){
     fd = open("list.txt", O_RDONLY);
 
     for(i = 0; i < 16; i++){
-        int flag = 0; // 0 : username, 1 : password
         for(int j = 0; i < 32; j++){
             if((n = read(fd, &buf, 1)) > 0){
                 if(!strcmp(&buf, " ")){
-                    flag = 1;
-                    continue;;
-                }
-                else if(!strcmp(&buf, "\n")){
                     break;
                 }
-                
-                if(!flag)
-                    userID[i][j] = buf;
-                    // strcpy(userID[i][j], buf);
-                else if(flag == 1)
-                    userID[i][j] = buf;
-                    // strcpy(pwdID[i][j], buf);
+                userID[i][j] = buf;
+            }
+            else break;
+        }
+
+        for(int j = 0; i < 32; j++){
+            if((n = read(fd, &buf, 1)) > 0){
+                if(!strcmp(&buf, "\n")){
+                    break;
+                }                
+                pwdID[i][j] = buf;
             }
             else break;
         }
     }
 }
 
-int check_idpw(char user[32], char pw[32]){
+int check_idpw(char* user, char* pw){
     int i;
+
     for(i = 0; i < 16; i++){
         if((!strcmp(userID[i], user)) && (!strcmp(pwdID[i], pw))){
             return 1;
@@ -56,8 +56,10 @@ int main(int argc, char *argv[])
 
     printf(1, "Username: ");
     gets(user, 32);
+    user[strlen(user) - 1] = '\0';
     printf(1, "Password: ");
     gets(pw, 32);
+    pw[strlen(pw) - 1] = '\0';
 
     get_user_list();
 
