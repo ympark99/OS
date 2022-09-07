@@ -92,6 +92,6 @@ sys_uptime(void)
 
 int sys_memsize(void){
   uint size;
-  // todo
+  size = myproc()->sz;
   return size;
 }
