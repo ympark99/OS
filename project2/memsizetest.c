@@ -1,3 +1,6 @@
+#include "types.h"
+#include "user.h"
+
 #define SIZE 2048
 
 int main(void)
