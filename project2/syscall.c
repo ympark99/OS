@@ -166,21 +166,14 @@ syscall(void)
   int num;
   struct proc *curproc = myproc();
 
-  int is_traced = (curproc->traced & T_TRACE);
-
   num = curproc->tf->eax;
-
-  // if(num == SYS_exit && is_traced){
-  //   cprintf("syscall traced: pid = %d, syscall = %s, %d returned",
-  //   curproc->pid, syscall_names[num], curproc->tf);
-  // }
-
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     curproc->tf->eax = syscalls[num]();
-    if(is_traced){
-      cprintf("syscall traced: pid = %d, syscall = %s, %d returned",
-      curproc->pid, syscall_names[num], curproc->tf->eax);
-    }
+
+    if(curproc->traced >> num & 1){
+      cprintf("syscall traced: pid = %d, syscall = %s, %d returned\n",
+        curproc->pid, syscall_names[num], curproc->tf->eax);
+    }    
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             curproc->pid, curproc->name, num);
