@@ -90,8 +90,20 @@ sys_uptime(void)
   return xticks;
 }
 
-int sys_memsize(void){
+int 
+sys_memsize(void)
+{
   uint size;
   size = myproc()->sz;
   return size;
+}
+
+int
+sys_trace(void)
+{
+    int n;
+    if(argint(0, &n) < 0)
+      return -1;
+    myproc()->traced = n;
+    return 0;
 }
