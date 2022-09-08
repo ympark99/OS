@@ -7,10 +7,6 @@
 #include "proc.h"
 #include "spinlock.h"
 
-#define T_TRACE 1
-#define T_FORK 2
-#define T_UNTRACE 0
-
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -91,7 +87,6 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
-  p->traced = T_UNTRACE;
   p->pid = nextpid++;
 
   release(&ptable.lock);
@@ -201,7 +196,7 @@ fork(void)
     np->state = UNUSED;
     return -1;
   }
-  np->traced = (curproc->traced & T_FORK) ? curproc->traced : T_UNTRACE;
+  np->traced = curproc->traced;
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
