@@ -94,6 +94,7 @@ int
 sys_memsize(void)
 {
   uint size;
+  // myproc()의 size 가져옴
   size = myproc()->sz;
   return size;
 }
