@@ -196,7 +196,7 @@ fork(void)
     np->state = UNUSED;
     return -1;
   }
-  np->traced = curproc->traced;
+  np->traced = curproc->traced; // 자식 프로세스에 mask 전달
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
