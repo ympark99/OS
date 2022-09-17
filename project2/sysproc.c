@@ -103,9 +103,9 @@ int
 sys_trace(void)
 {
     int n;
-    // trace mask와 커널 함수 trace 얻기
+    // trace mask 얻기
     if(argint(0, &n) < 0)
       return -1;
-    myproc()->traced = n;
+    myproc()->traced = n; // 현재 프로세스의 trace mask를 수정
     return 0;
 }
