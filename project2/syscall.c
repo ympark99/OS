@@ -7,8 +7,6 @@
 #include "x86.h"
 #include "syscall.h"
 
-#define T_TRACE 1
-
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
 // Arguments on the stack, from the user call to the C
@@ -170,6 +168,7 @@ syscall(void)
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     curproc->tf->eax = syscalls[num]();
 
+    // 시스템 콜이 trace mask return시 바로 문장 출력
     if(curproc->traced >> num & 1){
       cprintf("syscall traced: pid = %d, syscall = %s, %d returned\n",
         curproc->pid, syscall_names[num], curproc->tf->eax);
