@@ -49,7 +49,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  int traced;
+  int traced; // 시스템 콜 중 관련 정보 호출
 };
 
 // Process memory is laid out contiguously, low addresses first:
