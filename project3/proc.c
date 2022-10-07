@@ -34,7 +34,7 @@ struct proc *ssu_schedule()
   //todo:
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == RUNNABLE){
-      if(ret == RUNNABLE || (p->priority > ret->priority)){
+      if(ret == 0 || (p->priority > ret->priority)){
         ret = p;
       }
     }
@@ -60,7 +60,7 @@ void update_min_priority()
   //todo:
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == RUNNABLE){
-      if(min == RUNNABLE || (p->priority > min->priority))
+      if(min == 0 || (p->priority > min->priority))
         min = p;
     }
   }
@@ -610,5 +610,6 @@ void do_weightset(int weight)
   acquire(&ptable.lock);
   //todo
   myproc()->weight = weight;
+  // 시스템 콜?
   release(&ptable.lock);
 }
