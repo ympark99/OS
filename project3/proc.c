@@ -15,7 +15,7 @@ int weight = 1;
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
-  int min_priority; // 가장 작은 priority
+  long min_priority; // 가장 작은 priority
 } ptable;
 
 static struct proc *initproc;
@@ -32,6 +32,13 @@ struct proc *ssu_schedule()
   struct proc *ret = NULL;
 
   //todo:
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNABLE){
+      if(ret == RUNNABLE || (p->priority > ret->priority)){
+        ret = p;
+      }
+    }
+  }
 
   #ifdef DEBUG
     if(ret)
@@ -43,6 +50,7 @@ struct proc *ssu_schedule()
 void update_priority(struct proc *proc)
 {
   //todo:
+  // proc->priority = proc->priority + ???;
 }
 
 void update_min_priority()
@@ -50,13 +58,19 @@ void update_min_priority()
   struct proc *min = NULL;
   struct proc *p;
   //todo:
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNABLE){
+      if(min == RUNNABLE || (p->priority > min->priority))
+        min = p;
+    }
+  }
   if(min != NULL)
     ptable.min_priority = min->priority;
 }
 
 void assign_min_priority(struct proc *proc)
 {
-  //todo:
+  proc->priority = ptable.min_priority;
 }
 
 void
@@ -126,6 +140,8 @@ allocproc(void)
 
 found:
   // todo:weight 부여
+  weight++;
+  assign_min_priority(p);
   p->state = EMBRYO;
   p->pid = nextpid++;
 
