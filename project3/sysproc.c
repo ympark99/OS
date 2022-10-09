@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "proc.c"
 
 int
 sys_fork(void)
@@ -114,9 +115,9 @@ int
 sys_weightset(void)
 {
     int n;
-    // trace mask 얻기
     if(argint(0, &n) < 0)
       return -1;
-    // myproc()->traced = n; // 현재 프로세스의 trace mask를 수정
+    // todo: 인자로 받은거 적용
+    do_weightset(n);
     return 0;
 }
