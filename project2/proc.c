@@ -7,9 +7,15 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#define TIME_SLICE 10000000
+#define NULL ((void *)0)
+
+int weight = 1;
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+  long min_priority; // 가장 작은 priority
 } ptable;
 
 static struct proc *initproc;
@@ -19,6 +25,55 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+struct proc *ssu_schedule()
+{
+  struct proc *p;
+  struct proc *ret = NULL;
+
+  //todo:
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNABLE){
+      // if(ret != NULL && p != NULL)
+        // cprintf("ret/now pid weight : %d / %d | %d / %d\n", ret->pid, p->pid, ret->weight, p->weight);
+      if(ret == NULL || (ret->priority > p->priority)){
+        ret = p;
+      }
+    }
+  }
+
+  #ifdef DEBUG
+    if(ret)
+      cprintf("PID: %d, NAME: %s, WEIGHT: %d, PRIORITY: %d\n", ret->pid, ret->name, ret->weight, ret->priority);
+  #endif
+  return ret;
+}
+
+void update_priority(struct proc *proc)
+{
+  proc->priority = proc->priority + (TIME_SLICE / weight);
+}
+
+void update_min_priority()
+{
+  struct proc *min = NULL;
+  struct proc *p;
+  //todo:
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    // 제일 먼저 실행될 프로세스 선택
+    if(p->state == RUNNABLE){
+      if(min == NULL || (min->priority > p->priority))
+        min = p;
+    }
+  }
+  if(min != NULL)
+    ptable.min_priority = min->priority;  
+}
+
+void assign_min_priority(struct proc *proc)
+{
+  proc->priority = ptable.min_priority;
+}
 
 void
 pinit(void)
@@ -86,6 +141,12 @@ allocproc(void)
   return 0;
 
 found:
+  //todo
+  weight++; // weight 부여
+  // p->weight = weight;
+  assign_min_priority(p);
+  cprintf("priority : %d\n", p->priority);  
+
   p->state = EMBRYO;
   p->pid = nextpid++;
 
@@ -333,9 +394,18 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
+    // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      // if(p->state != RUNNABLE)
+      //   continue;
+
+      p = ssu_schedule();
+      if(p == NULL){
+        release(&ptable.lock);
         continue;
+      }
+
+      update_priority(p);
+      update_min_priority();
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -347,10 +417,12 @@ scheduler(void)
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
+      //todo
+
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-    }
+    // }
     release(&ptable.lock);
 
   }
@@ -459,7 +531,8 @@ static void
 wakeup1(void *chan)
 {
   struct proc *p;
-
+  //todo
+  // assign_min_priority(p);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
       p->state = RUNNABLE;
@@ -532,4 +605,15 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+void do_weightset(int weight)
+{
+  if(weight == 0){
+    cprintf("weight error\n");
+    return;
+  }
+  acquire(&ptable.lock);
+  myproc()->weight = weight;
+  release(&ptable.lock);
 }
