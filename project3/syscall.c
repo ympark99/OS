@@ -131,6 +131,7 @@ static int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_memsize] sys_memsize,
 [SYS_trace] sys_trace,
+[SYS_weightset] sys_weightset,
 };
 
 static char *syscall_names[] = {
