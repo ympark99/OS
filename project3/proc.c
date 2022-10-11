@@ -26,31 +26,35 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
-struct proc *ssu_schedule()
-{
-  struct proc *p;
-  struct proc *ret = NULL;
+// struct proc *ssu_schedule()
+// {
+//   struct proc *p;
+//   struct proc *ret = NULL;
+//   struct proc *p1;
 
-  //todo:
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->state == RUNNABLE){
-      if(ret == 0 || (p->priority > ret->priority)){
-        ret = p;
-      }
-    }
-  }
 
-  #ifdef DEBUG
-    if(ret)
-      cprintf("PID: %d, NAME: %s, WEIGHT: %d, PRIORITY: %d\n", ret->pid, ret->name, ret->weight, ret->priority);
-  #endif
-  return ret;
-}
+//     // if(p->state == RUNNABLE){
+//     //   // if(ret != NULL && p != NULL)
+//     //     // cprintf("ret/now pid weight : %d / %d | %d / %d\n", ret->pid, p->pid, ret->weight, p->weight);
+//     //     //todo priority 값 가장 작은애 -> 우선순위가 가장 높은애
+//     //   if(ret == NULL || (ret->priority > p->priority)){
+//     //     ret = p;
+//     //   }
+//     // }
+//   // }
+
+//   #ifdef DEBUG
+//     if(ret)
+//       cprintf("PID: %d, NAME: %s, WEIGHT: %d, PRIORITY: %d\n", ret->pid, ret->name, ret->weight, ret->priority);
+//   #endif
+//   if(ret != NULL)
+//     cprintf("pid weight priority : %d %d %d\n", ret->pid, ret->weight, ret->priority);
+//   return ret;
+// }
 
 void update_priority(struct proc *proc)
 {
-  //todo:
-  // proc->priority = proc->priority + ???;
+  proc->priority = proc->priority + (TIME_SLICE / weight);
 }
 
 void update_min_priority()
@@ -59,17 +63,20 @@ void update_min_priority()
   struct proc *p;
   //todo:
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    // 제일 먼저 실행될 프로세스 선택
     if(p->state == RUNNABLE){
-      if(min == 0 || (p->priority > min->priority))
+      if(min == NULL || (min->priority > p->priority))
         min = p;
     }
   }
   if(min != NULL)
-    ptable.min_priority = min->priority;
+    ptable.min_priority = min->priority;  
 }
 
 void assign_min_priority(struct proc *proc)
 {
+  if(proc->priority < ptable.min_priority)
+    ptable.min_priority = proc->priority;
   proc->priority = ptable.min_priority;
 }
 
@@ -139,11 +146,13 @@ allocproc(void)
   return 0;
 
 found:
-  // todo:weight 부여
-  weight++;
-  assign_min_priority(p);
   p->state = EMBRYO;
   p->pid = nextpid++;
+  //todo : 생성돼서 실행될때, priority weight 추구ㅏ
+  weight++; // weight 부여
+  p->weight = weight; // weight부여
+  assign_min_priority(p); // priority 부여
+  // cprintf("pid weight priority : %d %d %d\n", p->pid, p->weight, p->priority);
 
   release(&ptable.lock);
 
@@ -178,7 +187,7 @@ userinit(void)
 {
   struct proc *p;
   extern char _binary_initcode_start[], _binary_initcode_size[];
-
+  ptable.min_priority = 3; // 초기값 부여
   p = allocproc();
   
   initproc = p;
@@ -382,22 +391,35 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+
+  struct proc *p1;        
   
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
+    struct proc *highP;
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      // if(p->state != RUNNABLE)
-        // continue;
-
-      p = ssu_schedule();
-      if(p == NULL){
-        release(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
         continue;
+
+      highP = p;
+      for(p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++){
+        if(p1->state != RUNNABLE)
+          continue;
+        if(highP->priority > p1->priority)
+          highP = p1;
       }
+      p = highP;
+      cprintf("pid weight priority : %d %d %d\n", p->pid, p->weight, p->priority);
+      // p = ssu_schedule();
+      // if(p == NULL){
+      //   release(&ptable.lock);
+      //   continue;
+      // }
+      
+      // cprintf("pid weight priority : %d %d %d\n", p->pid, p->weight, p->priority);
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -408,21 +430,14 @@ scheduler(void)
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
-
-      //todo:
-      // struct proc *lowP = 0;
-      // struct proc *p1 = 0;
-      // if((p1->state == RUNNABLE) && (lowP->priority < p1->priority))
-      //   lowP = p1;
-
-      // ptable.min_priority = lowP;
-
+      //todo
+      update_priority(p);
+      update_min_priority();
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-    // }
+    }
     release(&ptable.lock);
-
   }
 }
 
@@ -529,11 +544,12 @@ static void
 wakeup1(void *chan)
 {
   struct proc *p;
-  //todo
-  // assign_min_priority(p);
+
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
       p->state = RUNNABLE;
+  //todo wakeup시 가장 작은 값 할당
+  assign_min_priority(p);
 }
 
 // Wake up all processes sleeping on chan.
@@ -607,9 +623,11 @@ procdump(void)
 
 void do_weightset(int weight)
 {
+  if(weight == 0){
+    cprintf("weight error\n");
+    return;
+  }
   acquire(&ptable.lock);
-  //todo
   myproc()->weight = weight;
-  // 시스템 콜?
   release(&ptable.lock);
 }
