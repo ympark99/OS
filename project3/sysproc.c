@@ -6,7 +6,6 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
-#include "proc.c"
 
 int
 sys_fork(void)
@@ -117,7 +116,7 @@ sys_weightset(void)
     int n;
     if(argint(0, &n) < 0)
       return -1;
-    // todo: 인자로 받은거 적용
+    //인자로 받은 weight 부여
     do_weightset(n);
     return 0;
 }
