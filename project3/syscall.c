@@ -103,8 +103,6 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
-extern int sys_memsize(void);
-extern int sys_trace(void);
 extern int sys_weightset(void);
 
 static int (*syscalls[])(void) = {
@@ -129,36 +127,7 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_memsize] sys_memsize,
-[SYS_trace] sys_trace,
 [SYS_weightset] sys_weightset,
-};
-
-static char *syscall_names[] = {
-  [SYS_fork]    "fork",
-  [SYS_exit]    "exit",
-  [SYS_wait]    "wait",
-  [SYS_pipe]    "pipe",
-  [SYS_read]    "read",
-  [SYS_kill]    "kill",
-  [SYS_exec]    "exec",
-  [SYS_fstat]   "fstat",
-  [SYS_chdir]   "chdir",
-  [SYS_dup]     "dup",
-  [SYS_getpid]  "getpid",
-  [SYS_sbrk]    "sbrk",
-  [SYS_sleep]   "sleep",
-  [SYS_uptime]  "uptime",
-  [SYS_open]    "open",
-  [SYS_write]   "write",
-  [SYS_mknod]   "mknod",
-  [SYS_unlink]  "unlink",
-  [SYS_link]    "link",
-  [SYS_mkdir]   "mkdir",
-  [SYS_close]   "close",
-  [SYS_memsize] "memsize",
-  [SYS_trace] "trace",
-  [SYS_weightset] "weightset",
 };
 
 void
@@ -170,12 +139,6 @@ syscall(void)
   num = curproc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     curproc->tf->eax = syscalls[num]();
-
-    // 시스템 콜이 trace mask return시 바로 문장 출력
-    if(curproc->traced >> num & 1){
-      cprintf("syscall traced: pid = %d, syscall = %s, %d returned\n",
-        curproc->pid, syscall_names[num], curproc->tf->eax);
-    }    
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             curproc->pid, curproc->name, num);
