@@ -90,25 +90,25 @@ sys_uptime(void)
   return xticks;
 }
 
-int 
-sys_memsize(void)
-{
-  uint size;
-  // myproc()의 size 가져옴
-  size = myproc()->sz;
-  return size;
-}
+// int 
+// sys_memsize(void)
+// {
+//   uint size;
+//   // myproc()의 size 가져옴
+//   size = myproc()->sz;
+//   return size;
+// }
 
-int
-sys_trace(void)
-{
-    int n;
-    // trace mask 얻기
-    if(argint(0, &n) < 0)
-      return -1;
-    myproc()->traced = n; // 현재 프로세스의 trace mask를 수정
-    return 0;
-}
+// int
+// sys_trace(void)
+// {
+//     int n;
+//     // trace mask 얻기
+//     if(argint(0, &n) < 0)
+//       return -1;
+//     myproc()->traced = n; // 현재 프로세스의 trace mask를 수정
+//     return 0;
+// }
 
 int
 sys_weightset(void)
