@@ -100,8 +100,8 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   //생성돼서 실행될때, priority weight 부여
-  weight++; // weight 부여
   p->weight = weight; // weight부여
+  weight++; // weight 부여
   assign_min_priority(p); // priority 부여
 
   release(&ptable.lock);
