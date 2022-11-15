@@ -107,7 +107,6 @@ void lru(){
 
     int frames[frame_cnt], counter = 0, time[10], flag1, flag2, i, j, pos, faults = 0;
 
-
     for(i = 0; i < frame_cnt; i++){
         frames[i] = -1;
     }
@@ -168,6 +167,48 @@ void lifo(){
     fprintf(stdout, "\n LIFO\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
+    int pageFaults = 0;
+    int m, n, s;
+
+    fprintf(stdout, "Incoming  \t");
+    for(int i = 0; i < frame_cnt; i++){
+        fprintf(stdout, "cnt %d \t", i+1);
+    }
+    int temp[frame_cnt];
+    for(m = 0; m < frame_cnt; m++){
+        temp[m] = -1;
+    }
+
+    for(m = 0; m < pages; m++){
+        s = 0;
+
+        for(n = 0; n < frame_cnt; n++){
+            if(randoms[m] == temp[n]){
+                s++;
+                pageFaults--;
+            }
+        }
+        pageFaults++;
+        
+        if((pageFaults <= frame_cnt) && (s == 0)){
+            temp[m] = randoms[m];
+        }
+        else if(s == 0){
+            temp[frame_cnt - 1] = randoms[m];
+        }
+
+        printf("\n");
+        printf("%d\t\t", randoms[m]);
+        for(n = 0; n < frame_cnt; n++){
+            if(temp[n] != -1)
+                printf(" %d\t", temp[n]);
+            else
+                printf(" - \t");
+        }
+    }
+
+    printf("\nTotal Page Faults : %d\n", pageFaults);
+    return;
 }
 
 // optimal
@@ -400,7 +441,6 @@ void start(){
         fgets(filename, BUF_SIZE, stdin); // 명령어 입력
     }
 
-
     for(int i = 0; i < 3; i++){
         if(algo_run[i] == -1) break;
 
@@ -422,6 +462,7 @@ void start(){
                 break;
             case 5: // LFU
                 lfu();
+                optimal();
                 break;
             case 6: // SC
                 break;
