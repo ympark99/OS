@@ -6,13 +6,88 @@
 #include <stdbool.h>
 #include "page.h"
 
-int frame; // 프레임 수
+int frame_cnt; // 프레임 수
 int inputType; // 1 -> 랜덤, 2 -> 파일
 int randoms[RAND_MIN];
-int pages = 30;
+int pages = 500;
 int rw[RAND_MIN]; // 0 -> R, 1 -> W
 char filename[BUF_SIZE];
 
+// lfu print
+void lfu_print(int frame_cnt, int frames[]){
+    int j;
+    for (j = 0; j < frame_cnt; j++){
+            if(frames[j] != -1)
+                printf("%d\t", frames[j]);
+            else
+                printf(" - \t");
+    }
+    printf("\n");
+}
+
+// lfu : 카운터 같으면 가장 앞에거
+void lfu(){
+    fprintf(stdout, "\n LFU\n");
+    fprintf(stdout, "-----------------------------------------------------------------------------\n");
+
+    int i, j, k, frames[frame_cnt], move = 0, flag, faults = 0, count1[frame_cnt], repindex, leastcount;
+
+    memset(count1, 0, sizeof(count1));
+
+    for (i = 0; i < frame_cnt; i++){
+        frames[i] = -1;
+    }
+    
+    fprintf(stdout, "Incoming  \t");
+    for(int i = 0; i < frame_cnt; i++){
+        fprintf(stdout, "cnt %d \t", i+1);
+    }
+    printf("\n");
+
+    for (i = 0; i < pages; i++){
+        printf("%d\t\t", randoms[i]);
+        flag = 0;
+        for (j = 0; j < frame_cnt; j++)
+        {
+            if (randoms[i] == frames[j])
+            {
+                flag = 1;
+                count1[j]++;
+                lfu_print(frame_cnt, frames);
+                break;
+            }
+        }
+        if (flag == 0 && faults < frame_cnt)
+        {
+            frames[move] = randoms[i];
+            count1[move] = 1;
+            move = (move + 1) % frame_cnt;
+            faults++;
+            lfu_print(frame_cnt, frames);
+        }
+        else if (flag == 0)
+        {
+            repindex = 0;
+            leastcount = count1[0];
+            for (j = 1; j < frame_cnt; j++)
+            {
+                if (count1[j] < leastcount)
+                {
+                    repindex = j;
+                    leastcount = count1[j];
+                }
+            }
+
+            frames[repindex] = randoms[i];
+            count1[repindex] = 1;
+            faults++;
+            lfu_print(frame_cnt, frames);
+        }
+    }
+    printf("Total Page Faults : %d\n", faults);
+}
+
+// lru 찾아줌
 int findLRU(int time[], int n){
     int i, minimum = time[0], pos = 0;
     
@@ -30,22 +105,22 @@ void lru(){
     fprintf(stdout, "\n LRU\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    int frames[frame], counter = 0, time[10], flag1, flag2, i, j, pos, faults = 0;
+    int frames[frame_cnt], counter = 0, time[10], flag1, flag2, i, j, pos, faults = 0;
 
 
-    for(i = 0; i < frame; i++){
+    for(i = 0; i < frame_cnt; i++){
         frames[i] = -1;
     }
 
     fprintf(stdout, "Incoming  \t");
-    for(int i = 0; i < frame; i++){
-        fprintf(stdout, "Frame %d \t", i+1);
+    for(int i = 0; i < frame_cnt; i++){
+        fprintf(stdout, "cnt %d \t", i+1);
     }
 
     for(i = 0; i < pages; i++){
         flag1 = flag2 = 0;
         
-        for(j = 0; j < frame; j++){
+        for(j = 0; j < frame_cnt; j++){
             if(frames[j] == randoms[i]){
                 counter++;
                 time[j] = counter;
@@ -55,7 +130,7 @@ void lru(){
         }
             
         if(flag1 == 0){
-            for(j = 0; j < frame; j++){
+            for(j = 0; j < frame_cnt; j++){
                 if(frames[j] == -1){
                     counter++;
                     faults++;
@@ -68,7 +143,7 @@ void lru(){
         }
             
         if(flag2 == 0){
-            pos = findLRU(time, frame);
+            pos = findLRU(time, frame_cnt);
             counter++;
             faults++;
             frames[pos] = randoms[i];
@@ -78,11 +153,11 @@ void lru(){
 
         printf("\n");
         printf("%d\t\t", randoms[i]);
-        for(j = 0; j < frame; j++){
+        for(j = 0; j < frame_cnt; j++){
             if(frames[j] != -1)
-                printf("%d\t\t", frames[j]);
+                printf("%d\t", frames[j]);
             else
-                printf(" - \t\t");
+                printf(" - \t");
         }
     }
     printf("\nTotal Page Faults = %d\n", faults);
@@ -100,19 +175,19 @@ void optimal(){
     fprintf(stdout, "\n Optimal\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    int frames[frame], temp[frame], flag1, flag2, flag3, i, j, k, pos, max, faults = 0;
-    for(i = 0; i < frame; i++){
+    int frames[frame_cnt], temp[frame_cnt], flag1, flag2, flag3, i, j, k, pos, max, faults = 0;
+    for(i = 0; i < frame_cnt; i++){
         frames[i] = -1;
     }
 
     fprintf(stdout, "Incoming  \t");
-    for(int i = 0; i < frame; i++){
-        fprintf(stdout, "Frame %d \t", i+1);
+    for(int i = 0; i < frame_cnt; i++){
+        fprintf(stdout, "cnt %d \t", i+1);
     }
     for(i = 0; i < pages; i++){
         flag1 = flag2 = 0;
         
-        for(j = 0; j < frame; j++){
+        for(j = 0; j < frame_cnt; j++){
             if(frames[j] == randoms[i]){
                 flag1 = flag2 = 1;
                 break;
@@ -120,7 +195,7 @@ void optimal(){
         }
         
         if(flag1 == 0){
-            for(j = 0; j < frame; j++){
+            for(j = 0; j < frame_cnt; j++){
                 if(frames[j] == -1){
                     faults++;
                     frames[j] = randoms[i];
@@ -132,7 +207,7 @@ void optimal(){
         if(flag2 == 0){
             flag3 =0;
         
-            for(j = 0; j < frame; j++){
+            for(j = 0; j < frame_cnt; j++){
                 temp[j] = -1;
             
                 for(k = i + 1; k < pages; ++k){
@@ -143,7 +218,7 @@ void optimal(){
                 }
             }
             
-            for(j = 0; j < frame; j++){
+            for(j = 0; j < frame_cnt; j++){
                 if(temp[j] == -1){
                     pos = j;
                     flag3 = 1;
@@ -155,7 +230,7 @@ void optimal(){
                 max = temp[0];
                 pos = 0;
             
-                for(j = 1; j < frame; j++){
+                for(j = 1; j < frame_cnt; j++){
                     if(temp[j] > max){
                         max = temp[j];
                         pos = j;
@@ -168,11 +243,11 @@ void optimal(){
         
         printf("\n");
         printf("%d\t\t", randoms[i]);
-        for(j = 0; j < frame; j++){
+        for(j = 0; j < frame_cnt; j++){
             if(frames[j] != -1)
-                printf("%d\t\t", frames[j]);
+                printf("%d\t", frames[j]);
             else
-                printf(" - \t\t");
+                printf(" - \t");
         }
     }
     
@@ -188,18 +263,18 @@ void fifo(){
     int m, n, s;
 
     fprintf(stdout, "Incoming  \t");
-    for(int i = 0; i < frame; i++){
-        fprintf(stdout, "Frame %d \t", i+1);
+    for(int i = 0; i < frame_cnt; i++){
+        fprintf(stdout, "cnt %d \t", i+1);
     }
-    int temp[frame];
-    for(m = 0; m < frame; m++){
+    int temp[frame_cnt];
+    for(m = 0; m < frame_cnt; m++){
         temp[m] = -1;
     }
 
     for(m = 0; m < pages; m++){
         s = 0;
 
-        for(n = 0; n < frame; n++){
+        for(n = 0; n < frame_cnt; n++){
             if(randoms[m] == temp[n]){
                 s++;
                 pageFaults--;
@@ -207,20 +282,20 @@ void fifo(){
         }
         pageFaults++;
         
-        if((pageFaults <= frame) && (s == 0)){
+        if((pageFaults <= frame_cnt) && (s == 0)){
             temp[m] = randoms[m];
         }
         else if(s == 0){
-            temp[(pageFaults - 1) % frame] = randoms[m];
+            temp[(pageFaults - 1) % frame_cnt] = randoms[m];
         }
 
         printf("\n");
         printf("%d\t\t", randoms[m]);
-        for(n = 0; n < frame; n++){
+        for(n = 0; n < frame_cnt; n++){
             if(temp[n] != -1)
-                printf(" %d\t\t", temp[n]);
+                printf(" %d\t", temp[n]);
             else
-                printf(" - \t\t");
+                printf(" - \t");
         }
     }
 
@@ -284,8 +359,8 @@ void start(){
         fprintf(stdout, "-----------------------------------------------------------------------------\n");
         fprintf(stdout, "B. 페이지 프레임의 개수를 입력하시오. (3~10)\n");
         fprintf(stdout, ">> ");         
-        scanf("%d", &frame);   
-        if(frame < 3 || frame > 10){
+        scanf("%d", &frame_cnt);   
+        if(frame_cnt < 3 || frame_cnt > 10){
             fprintf(stderr, "3~10 사이의 수 입력\n");
         }
         else break;
@@ -308,7 +383,7 @@ void start(){
         fprintf(stdout, "페이지 스트림\n");
         fprintf(stdout, "--------------\n");
         for(int i = 0; i < RAND_MIN; i++){
-            randoms[i] = rand() % 9 + 1;
+            randoms[i] = rand() % 30 + 1;
             rw[i] = rand() % 2;
 
             if(rw[i] == 0)
@@ -346,6 +421,7 @@ void start(){
                 optimal();
                 break;
             case 5: // LFU
+                lfu();
                 break;
             case 6: // SC
                 break;
