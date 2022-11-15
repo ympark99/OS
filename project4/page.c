@@ -9,9 +9,74 @@
 int frame_cnt; // 프레임 수
 int inputType; // 1 -> 랜덤, 2 -> 파일
 int randoms[RAND_MIN];
-int pages = 500;
+int ps_num = 20;
 int rw[RAND_MIN]; // 0 -> R, 1 -> W
 char filename[BUF_SIZE];
+
+//todo : ps_num 500, rand 30
+
+
+// second chance : 참조비트 1로 만들고 그 비트부터 검사
+void sc(){
+    fprintf(stdout, "\n Second Chance\n");
+    fprintf(stdout, "-----------------------------------------------------------------------------\n");
+
+    int i;
+    int full = 0;
+    int count = 0;
+    int frames[frame_cnt];
+    int chance[frame_cnt];
+    int repptr = 0;
+    memset(frames, -1, sizeof(frames));
+    memset(chance, 0, sizeof(chance));
+
+    fprintf(stdout, "Incoming  \t");
+    for(int i = 0; i < frame_cnt; i++){
+        fprintf(stdout, "cnt %d \t", i+1);
+    }
+    fprintf(stdout, "\n");
+    for (i = 0; i < ps_num; i++){
+        printf("%d\t\t", randoms[i]);
+        int flag = 0;
+        if (full != 0){
+            for (int j = 0; j < full; j++)
+                if (randoms[i] == frames[j]){
+                    flag = 1;
+                    chance[j] = 1; // When ever page reference occurs, it's rference bit is set to 1
+                    break;
+                }
+        }        
+        if (flag != 1){
+            // 새로 할당
+            if (full != frame_cnt){
+                chance[full] = 1; // All the chance bits are set to 1 as each frames is being filled firstly
+                frames[full++] = randoms[i];
+            }
+            else{
+                int temp;
+                while (chance[repptr] != 0){
+                    chance[repptr++] = 0;
+                    if (repptr == frame_cnt)
+                        repptr = 0;
+                }
+                temp = frames[repptr];
+                frames[repptr] = randoms[i];
+                chance[repptr] = 1; // The latest page reference, hence it is set to 1
+                // printf("The page replaced is %d", temp);
+            }
+            count++;
+        }
+        for (int k = 0; k < frame_cnt; k++){
+            if(frames[k] != -1)
+                printf("%d\t", frames[k]);
+            else
+                printf(" - \t");
+        }
+        printf("\n");
+    }
+    printf("\nThe number of page faults are %d\n", count);
+    getchar();
+}
 
 // lfu print
 void lfu_print(int frame_cnt, int frames[]){
@@ -44,7 +109,7 @@ void lfu(){
     }
     printf("\n");
 
-    for (i = 0; i < pages; i++){
+    for (i = 0; i < ps_num; i++){
         printf("%d\t\t", randoms[i]);
         flag = 0;
         for (j = 0; j < frame_cnt; j++)
@@ -116,7 +181,7 @@ void lru(){
         fprintf(stdout, "cnt %d \t", i+1);
     }
 
-    for(i = 0; i < pages; i++){
+    for(i = 0; i < ps_num; i++){
         flag1 = flag2 = 0;
         
         for(j = 0; j < frame_cnt; j++){
@@ -179,7 +244,7 @@ void lifo(){
         temp[m] = -1;
     }
 
-    for(m = 0; m < pages; m++){
+    for(m = 0; m < ps_num; m++){
         s = 0;
 
         for(n = 0; n < frame_cnt; n++){
@@ -225,7 +290,7 @@ void optimal(){
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "cnt %d \t", i+1);
     }
-    for(i = 0; i < pages; i++){
+    for(i = 0; i < ps_num; i++){
         flag1 = flag2 = 0;
         
         for(j = 0; j < frame_cnt; j++){
@@ -251,7 +316,7 @@ void optimal(){
             for(j = 0; j < frame_cnt; j++){
                 temp[j] = -1;
             
-                for(k = i + 1; k < pages; ++k){
+                for(k = i + 1; k < ps_num; ++k){
                     if(frames[j] == randoms[k]){
                         temp[j] = k;
                         break;
@@ -312,7 +377,7 @@ void fifo(){
         temp[m] = -1;
     }
 
-    for(m = 0; m < pages; m++){
+    for(m = 0; m < ps_num; m++){
         s = 0;
 
         for(n = 0; n < frame_cnt; n++){
@@ -424,7 +489,7 @@ void start(){
         fprintf(stdout, "페이지 스트림\n");
         fprintf(stdout, "--------------\n");
         for(int i = 0; i < RAND_MIN; i++){
-            randoms[i] = rand() % 30 + 1;
+            randoms[i] = rand() % 6 + 1;
             rw[i] = rand() % 2;
 
             if(rw[i] == 0)
@@ -465,6 +530,8 @@ void start(){
                 optimal();
                 break;
             case 6: // SC
+                sc();
+                optimal();
                 break;
             case 7: // ESC
                 break;
