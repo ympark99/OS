@@ -16,6 +16,14 @@ char filename[BUF_SIZE];
 //todo : ps_num 500, rand 30
 
 
+void esc(){
+    fprintf(stdout, "\n Enhanced Second Chance\n");
+    fprintf(stdout, "-----------------------------------------------------------------------------\n");    
+
+
+    
+}
+
 // second chance : 참조비트 1로 만들고 그 비트부터 검사
 void sc(){
     fprintf(stdout, "\n Second Chance\n");
@@ -534,6 +542,8 @@ void start(){
                 optimal();
                 break;
             case 7: // ESC
+                esc();
+                // optimal();
                 break;
             case 8: // ALL
                 break;
