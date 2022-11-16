@@ -25,25 +25,15 @@ void esc(){
     int faults = 0;
     int temp; // pointer keep
 
-    // int *frames = calloc(frame_cnt, sizeof(int));
-    // int *reference_bit = calloc(frame_cnt, sizeof(int));
-    // int *modify_bit = calloc(frame_cnt, sizeof(int));
-
     int frames[frame_cnt], reference_bit[frame_cnt], modify_bit[frame_cnt];
 
     memset(frames, -1, sizeof(frames));
     memset(reference_bit, -1, sizeof(reference_bit));
     memset(modify_bit, -1, sizeof(modify_bit));
 
-    // // initialize the frames to be all -1
-    // for (i = 0; i < frame_cnt; i++){
-    //     frames[i] = -1;
-    //     modify_bit[i] = -1;
-    // }
-
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
-        fprintf(stdout, "cnt %d \t", i+1);
+        fprintf(stdout, "frame%d \t", i+1);
     }
     fprintf(stdout, "\n");
 
@@ -156,10 +146,7 @@ void esc(){
         if(isFault) fprintf(stdout, "page fault!");
         printf("\n");
     }
-    // free(frames);
-    // free(reference_bit);
-    // free(modify_bit);
-    printf("total page fault : %d\n", faults);
+    printf("Total Page Faults : %d\n", faults);
 }
 
 // second chance : 참조비트 1로 만들고 그 비트부터 검사
@@ -167,61 +154,81 @@ void sc(){
     fprintf(stdout, "\n Second Chance\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    int i;
-    int full = 0;
-    int count = 0;
-    int frames[frame_cnt];
-    int chance[frame_cnt];
-    int repptr = 0;
+    // counter
+    int i, j, ref;
+    int pointer = 0;
+    int idx = 0;
+    int faults = 0;
+    // the "frames" to keep track of memory
+    int frames[frame_cnt], reference_bit[frame_cnt];
+
     memset(frames, -1, sizeof(frames));
-    memset(chance, 0, sizeof(chance));
+    memset(reference_bit, -1, sizeof(reference_bit));
+
+    // initialize the frames to be all -1
+    for (i = 0; i < frame_cnt; i++){
+        frames[i] = -1;
+    }
 
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
-        fprintf(stdout, "cnt %d \t", i+1);
+        fprintf(stdout, "frame%d \t", i+1);
     }
     fprintf(stdout, "\n");
-    for (i = 0; i < ps_num; i++){
-        printf("%d\t\t", randoms[i]);
-        int flag = 0;
-        if (full != 0){
-            for (int j = 0; j < full; j++)
-                if (randoms[i] == frames[j]){
-                    flag = 1;
-                    chance[j] = 1; // When ever page reference occurs, it's rference bit is set to 1
-                    break;
-                }
-        }        
-        if (flag != 1){
-            // 새로 할당
-            if (full != frame_cnt){
-                chance[full] = 1; // All the chance bits are set to 1 as each frames is being filled firstly
-                frames[full++] = randoms[i];
+
+    for(i = 0; i < ps_num; i++){
+        bool isFault = false;
+        printf("%d\t\t", randoms[i] );
+        ref = -1;
+        // frame 탐색
+        for(int j = 0; j < frame_cnt; j++){
+            if( randoms[i] == frames[j] ){
+                ref = j;
+                break;
+            }
+        }
+
+        if (ref < 0){ // 같은 frame 없을때
+            if (idx < frame_cnt){ // 아직 프레임 못 채웠을때
+                // printf("REPLACING %d WITH %d AT: %d\n", frames[i], randoms[i], idx);
+                frames[idx] = randoms[i];
+                reference_bit[idx] = 0; // 참조비트 0
+                idx++;
+                isFault = true;
+                faults++;
             }
             else{
-                int temp;
-                while (chance[repptr] != 0){
-                    chance[repptr++] = 0;
-                    if (repptr == frame_cnt)
-                        repptr = 0;
+                for (j = 0; j < frame_cnt; j++){
+                    // 참조비트 0인경우
+                    if (reference_bit[pointer] == 0){
+                        isFault = true;
+                        faults++;
+                        break;
+                    }
+                    else reference_bit[pointer] = 0; // 참조비트 1이면 0으로 변경
+                    pointer = (pointer + 1) % (frame_cnt); // 다음 검사
                 }
-                temp = frames[repptr];
-                frames[repptr] = randoms[i];
-                chance[repptr] = 1; // The latest page reference, hence it is set to 1
-                // printf("The page replaced is %d", temp);
+
+                frames[pointer] = randoms[i];
+                reference_bit[pointer] = 0;
+                pointer = (pointer + 1) % (frame_cnt); // 다음으로 이동
             }
-            count++;
         }
+        else if (ref >= 0){ // page hit
+            reference_bit[ref] = 1; // 참조비트 1로 설정
+        }
+
         for (int k = 0; k < frame_cnt; k++){
-            if(frames[k] != -1)
-                printf("%d\t", frames[k]);
+            if(frames[k] != -1){
+                printf("%d|%d\t", frames[k], reference_bit[k]);
+            }
             else
                 printf(" - \t");
         }
+        if(isFault) fprintf(stdout, "page fault!");
         printf("\n");
     }
-    printf("\nThe number of page faults are %d\n", count);
-    getchar();
+    printf("Total Page Faults : %d\n", faults);
 }
 
 // lfu print
@@ -251,7 +258,7 @@ void lfu(){
     
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
-        fprintf(stdout, "cnt %d \t", i+1);
+        fprintf(stdout, "frame%d \t", i+1);
     }
     printf("\n");
 
@@ -324,7 +331,7 @@ void lru(){
 
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
-        fprintf(stdout, "cnt %d \t", i+1);
+        fprintf(stdout, "frame%d \t", i+1);
     }
 
     for(i = 0; i < ps_num; i++){
@@ -383,7 +390,7 @@ void lifo(){
 
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
-        fprintf(stdout, "cnt %d \t", i+1);
+        fprintf(stdout, "frame%d \t", i+1);
     }
     int temp[frame_cnt];
     for(m = 0; m < frame_cnt; m++){
@@ -434,7 +441,7 @@ void optimal(){
 
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
-        fprintf(stdout, "cnt %d \t", i+1);
+        fprintf(stdout, "frame%d \t", i+1);
     }
     for(i = 0; i < ps_num; i++){
         flag1 = flag2 = 0;
@@ -516,7 +523,7 @@ void fifo(){
 
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
-        fprintf(stdout, "cnt %d \t", i+1);
+        fprintf(stdout, "frame%d \t", i+1);
     }
     int temp[frame_cnt];
     for(m = 0; m < frame_cnt; m++){
@@ -684,6 +691,13 @@ void start(){
                 // optimal();
                 break;
             case 8: // ALL
+                fifo();
+                lifo();
+                lru();
+                lfu();
+                sc();
+                esc();
+                optimal();
                 break;
             default:
                 break;
