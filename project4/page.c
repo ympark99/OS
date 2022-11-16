@@ -15,13 +15,151 @@ char filename[BUF_SIZE];
 
 //todo : ps_num 500, rand 30
 
-
 void esc(){
     fprintf(stdout, "\n Enhanced Second Chance\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");    
+    int i, j, ref;
+    int pointer = 0;
+    int idx = 0;
+    int done;
+    int faults = 0;
+    int temp; // pointer keep
 
+    // int *frames = calloc(frame_cnt, sizeof(int));
+    // int *reference_bit = calloc(frame_cnt, sizeof(int));
+    // int *modify_bit = calloc(frame_cnt, sizeof(int));
 
-    
+    int frames[frame_cnt], reference_bit[frame_cnt], modify_bit[frame_cnt];
+
+    memset(frames, -1, sizeof(frames));
+    memset(reference_bit, -1, sizeof(reference_bit));
+    memset(modify_bit, -1, sizeof(modify_bit));
+
+    // // initialize the frames to be all -1
+    // for (i = 0; i < frame_cnt; i++){
+    //     frames[i] = -1;
+    //     modify_bit[i] = -1;
+    // }
+
+    fprintf(stdout, "Incoming  \t");
+    for(int i = 0; i < frame_cnt; i++){
+        fprintf(stdout, "cnt %d \t", i+1);
+    }
+    fprintf(stdout, "\n");
+
+    for(i = 0; i < ps_num; i++){
+        bool isFault = false;
+
+        printf("%d|1%d\t\t", randoms[i], rw[i]);
+        ref = -1;
+        // frame 탐색
+        for(int j = 0; j < frame_cnt; j++){
+            if( randoms[i] == frames[j] ){
+                ref = j;
+                break;
+            }
+        }
+
+        // ref = search_frames(frames, randoms[i], frame_cnt);
+        if (ref < 0){ // page fault 발생
+            isFault = true;
+            if (idx < frame_cnt){ // 아직 프레임 못 채웠을때
+                // printf("REPLACING %d WITH %d AT: %d\n", frames[i], randoms[i], idx);
+                frames[idx] = randoms[i];
+                reference_bit[idx] = 1; // R bit 1로 고정
+                modify_bit[idx] = rw[i];
+                idx++;
+            }
+            else{
+                done = 0;
+                temp = pointer;
+
+                // R비트 모두 1인 상태에서 다음 page fault이면 모두 0으로 변경
+                bool allOne = true;
+                for (j = 0; j < frame_cnt; j++){
+                    if (reference_bit[j] != 1){
+                        allOne = false;
+                        break;
+                    }
+                }
+                if(allOne){
+                    for (j = 0; j < frame_cnt; j++){
+                        reference_bit[j] = 0;
+                    }
+                }
+
+                // 우선 순위 같으면, 먼저 탐색한 순서로 처리
+                // 00 우선 검사
+                for (j = 0; j < frame_cnt; j++){
+                    // 00 1순위
+                    if (reference_bit[pointer] == 0 && modify_bit[pointer] == 0){
+                        done = 1;
+                        break;
+                    }
+                    pointer = (pointer + 1) % (frame_cnt);
+                }
+                // 01 검사
+                if (done == 0){
+                    pointer = temp;
+                    for (j = 0; j < frame_cnt; j++){
+                        if (reference_bit[pointer] == 0 && modify_bit[pointer] == 1){
+                            done = 1;
+                            break;
+                        }
+                        pointer = (pointer + 1) % (frame_cnt);
+                    }
+                }
+                // 10검사
+                if (done == 0){
+                    pointer = temp;
+                    for (j = 0; j < frame_cnt; j++){
+                        if (reference_bit[pointer] == 1 && modify_bit[pointer] == 0){
+                            done = 1;
+                            break;
+                        }
+                        pointer = (pointer + 1) % (frame_cnt);
+                    }
+                }
+                // 11검사
+                if (done == 0){
+                    pointer = temp;
+                    for (j = 0; j < frame_cnt; j++){
+                        if (reference_bit[pointer] == 1 && modify_bit[pointer] == 1){
+                            break;
+                        }
+                        pointer = (pointer + 1) % (frame_cnt);
+                    }
+                }
+
+                // do this no matter what loop breaks
+                frames[pointer] = randoms[i];
+                reference_bit[pointer] = 1; // R bit 1로 고정
+                modify_bit[pointer] = rw[i];
+                // pointer = (pointer + 1) % (frame_cnt);
+            }
+            faults++;
+        }
+        else if (ref >= 0){ // page hit
+            reference_bit[ref] = 1; // R bit 1로 고정
+            if (rw[i] == 1)
+                modify_bit[ref] = 1;
+            else modify_bit[ref] = 0;
+        }
+
+        for (int k = 0; k < frame_cnt; k++){
+            if(frames[k] != -1){
+                printf("%d|%d%d\t", frames[k], reference_bit[k], modify_bit[k]);
+            }
+            else
+                printf(" - \t");
+        }
+        if(isFault) fprintf(stdout, "page fault!");
+        printf("\n");
+    }
+    // free(frames);
+    // free(reference_bit);
+    // free(modify_bit);
+    printf("total page fault : %d\n", faults);
 }
 
 // second chance : 참조비트 1로 만들고 그 비트부터 검사
