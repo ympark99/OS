@@ -431,9 +431,7 @@ void optimal(){
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
     int frames[frame_cnt], temp[frame_cnt], flag1, flag2, flag3, i, j, k, pos, max, faults = 0;
-    for(i = 0; i < frame_cnt; i++){
-        frames[i] = -1;
-    }
+    memset(frames, -1, sizeof(frames));
 
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
@@ -448,7 +446,6 @@ void optimal(){
                 break;
             }
         }
-        
         if(flag1 == 0){
             // 프레임 못채운 경우
             for(j = 0; j < frame_cnt; j++){
@@ -465,7 +462,7 @@ void optimal(){
             for(j = 0; j < frame_cnt; j++){
                 temp[j] = -1;
             
-                for(k = i + 1; k < ps_num; ++k){
+                for(k = i + 1; k < ps_num; k++){
                     if(frames[j] == randoms[k]){
                         temp[j] = k;
                         break;
@@ -473,12 +470,14 @@ void optimal(){
                 }
             }            
             for(j = 0; j < frame_cnt; j++){
+                // 프레임 못채운 경우
                 if(temp[j] == -1){
                     pos = j;
                     flag3 = 1;
                     break;
                 }
-            }            
+            }
+            // 가장 오랫동안 사용되지 않을 페이지 탐색
             if(flag3 == 0){
                 max = temp[0];
                 pos = 0;
@@ -520,16 +519,14 @@ void fifo(){
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
     }
-    int temp[frame_cnt];
-    for(m = 0; m < frame_cnt; m++){
-        temp[m] = -1;
-    }
+    int frames[frame_cnt];
+    memset(frames, -1, sizeof(frames));
 
     for(m = 0; m < ps_num; m++){
         flag_hit = 0;
 
         for(n = 0; n < frame_cnt; n++){
-            if(randoms[m] == temp[n]){
+            if(randoms[m] == frames[n]){
                 flag_hit++;
                 pageFaults--;
             }
@@ -537,17 +534,17 @@ void fifo(){
         pageFaults++;
         
         if((pageFaults <= frame_cnt) && (flag_hit == 0)){
-            temp[m] = randoms[m];
+            frames[m] = randoms[m];
         }
         else if(flag_hit == 0){
-            temp[(pageFaults - 1) % frame_cnt] = randoms[m];
+            frames[(pageFaults - 1) % frame_cnt] = randoms[m];
         }
 
         printf("\n");
         printf("%d\t\t", randoms[m]);
         for(n = 0; n < frame_cnt; n++){
-            if(temp[n] != -1)
-                printf(" %d\t", temp[n]);
+            if(frames[n] != -1)
+                printf(" %d\t", frames[n]);
             else
                 printf(" - \t");
         }
@@ -632,27 +629,50 @@ void start(){
         }
         else break;
     }
+
+    // // 랜덤으로 스트림 생성
+    // for(int i = 0; i < RAND_MIN; i++){
+    //     randoms[i] = rand() % 6 + 1;
+    //     rw[i] = rand() % 2;
+    // }
+
     // 1 선택시 랜덤생성 후 출력
     if(inputType == 1){
         fprintf(stdout, "\n--------------\n");
         fprintf(stdout, "페이지 스트림\n");
         fprintf(stdout, "--------------\n");
+        // 랜덤으로 스트림 생성
         for(int i = 0; i < RAND_MIN; i++){
             randoms[i] = rand() % 6 + 1;
             rw[i] = rand() % 2;
 
             if(rw[i] == 0)
-                fprintf(stdout, "%d R : %d\n", i+1, randoms[i]);
-            else fprintf(stdout, "%d W : %d\n", i+1, randoms[i]);
+                fprintf(stdout, "%d: %d R\n", i+1, randoms[i]);
+            else fprintf(stdout, "%d: %d W\n", i+1, randoms[i]);
         }
         fprintf(stdout, "--------------\n");
     }
     // 2 선택시 파일 입력 받기
     else{
-        fprintf(stdout, "파일경로 입력\n");
+        fprintf(stdout, "현재 위치 내 생성할 파일 이름 입력 - 형식(.txt) 포함, 스트림은 랜덤으로 생성됩니다.\n");
         fprintf(stdout, ">> ");
         getchar(); // 입력 버퍼 비우기(\n)
         fgets(filename, BUF_SIZE, stdin); // 명령어 입력
+
+        FILE *fp = fopen(filename, "w");
+        // 파일에 랜덤으로 생성
+        for (int i = 0; i < ps_num; i++){
+            fprintf(fp, "%d ", rand() % 6 + 1);
+            fprintf(fp, "%d", rand() % 2);
+            fprintf(fp, "\n");
+        }
+        fclose(fp);
+        fp = fopen(filename, "rt"); // 읽기 모드로 open
+        for(int i = 0; i < ps_num; i++){
+            fscanf(fp, "%d %d", &randoms[i], &rw[i]);
+        }
+
+        fclose(fp);
     }
 
     for(int i = 0; i < 3; i++){
