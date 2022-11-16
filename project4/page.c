@@ -165,11 +165,6 @@ void sc(){
     memset(frames, -1, sizeof(frames));
     memset(reference_bit, -1, sizeof(reference_bit));
 
-    // initialize the frames to be all -1
-    for (i = 0; i < frame_cnt; i++){
-        frames[i] = -1;
-    }
-
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
@@ -232,7 +227,7 @@ void sc(){
 }
 
 // lfu print
-void lfu_print(int frame_cnt, int frames[]){
+void lfu_print(int frame_cnt, int frames[], int flag){
     int j;
     for (j = 0; j < frame_cnt; j++){
             if(frames[j] != -1)
@@ -240,6 +235,7 @@ void lfu_print(int frame_cnt, int frames[]){
             else
                 printf(" - \t");
     }
+    if(flag == 0) fprintf(stdout, "page fault!");
     printf("\n");
 }
 
@@ -265,26 +261,24 @@ void lfu(){
     for (i = 0; i < ps_num; i++){
         printf("%d\t\t", randoms[i]);
         flag = 0;
-        for (j = 0; j < frame_cnt; j++)
-        {
-            if (randoms[i] == frames[j])
-            {
+        for (j = 0; j < frame_cnt; j++){
+            // page hit
+            if (randoms[i] == frames[j]){
                 flag = 1;
                 count1[j]++;
-                lfu_print(frame_cnt, frames);
+                lfu_print(frame_cnt, frames, flag);
                 break;
             }
         }
-        if (flag == 0 && faults < frame_cnt)
-        {
+        // 다 못채운경우
+        if (flag == 0 && faults < frame_cnt){
             frames[move] = randoms[i];
             count1[move] = 1;
             move = (move + 1) % frame_cnt;
             faults++;
-            lfu_print(frame_cnt, frames);
+            lfu_print(frame_cnt, frames, flag);
         }
-        else if (flag == 0)
-        {
+        else if (flag == 0){
             repindex = 0;
             leastcount = count1[0];
             for (j = 1; j < frame_cnt; j++)
@@ -299,7 +293,7 @@ void lfu(){
             frames[repindex] = randoms[i];
             count1[repindex] = 1;
             faults++;
-            lfu_print(frame_cnt, frames);
+            lfu_print(frame_cnt, frames, flag);
         }
     }
     printf("Total Page Faults : %d\n", faults);
@@ -336,7 +330,7 @@ void lru(){
 
     for(i = 0; i < ps_num; i++){
         flag1 = flag2 = 0;
-        
+        // page hit
         for(j = 0; j < frame_cnt; j++){
             if(frames[j] == randoms[i]){
                 counter++;
@@ -348,6 +342,7 @@ void lru(){
             
         if(flag1 == 0){
             for(j = 0; j < frame_cnt; j++){
+                // 아직 다 못채운 경우
                 if(frames[j] == -1){
                     counter++;
                     faults++;
@@ -367,7 +362,6 @@ void lru(){
             time[pos] = counter;
         }
 
-
         printf("\n");
         printf("%d\t\t", randoms[i]);
         for(j = 0; j < frame_cnt; j++){
@@ -376,6 +370,7 @@ void lru(){
             else
                 printf(" - \t");
         }
+        if(flag1 == 0 || flag2 == 0) fprintf(stdout, "page fault!");
     }
     printf("\nTotal Page Faults = %d\n", faults);
 }
@@ -386,7 +381,7 @@ void lifo(){
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
     int pageFaults = 0;
-    int m, n, s;
+    int m, n, flag_hit;
 
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
@@ -398,20 +393,20 @@ void lifo(){
     }
 
     for(m = 0; m < ps_num; m++){
-        s = 0;
+        flag_hit = 0;
 
         for(n = 0; n < frame_cnt; n++){
             if(randoms[m] == temp[n]){
-                s++;
+                flag_hit++;
                 pageFaults--;
             }
         }
         pageFaults++;
         
-        if((pageFaults <= frame_cnt) && (s == 0)){
+        if((pageFaults <= frame_cnt) && (flag_hit == 0)){
             temp[m] = randoms[m];
         }
-        else if(s == 0){
+        else if(flag_hit == 0){
             temp[frame_cnt - 1] = randoms[m];
         }
 
@@ -423,6 +418,7 @@ void lifo(){
             else
                 printf(" - \t");
         }
+        if(flag_hit == 0) fprintf(stdout, "page fault!");
     }
 
     printf("\nTotal Page Faults : %d\n", pageFaults);
@@ -519,7 +515,7 @@ void fifo(){
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
     int pageFaults = 0;
-    int m, n, s;
+    int m, n, flag_hit;
 
     fprintf(stdout, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
@@ -531,20 +527,20 @@ void fifo(){
     }
 
     for(m = 0; m < ps_num; m++){
-        s = 0;
+        flag_hit = 0;
 
         for(n = 0; n < frame_cnt; n++){
             if(randoms[m] == temp[n]){
-                s++;
+                flag_hit++;
                 pageFaults--;
             }
         }
         pageFaults++;
         
-        if((pageFaults <= frame_cnt) && (s == 0)){
+        if((pageFaults <= frame_cnt) && (flag_hit == 0)){
             temp[m] = randoms[m];
         }
-        else if(s == 0){
+        else if(flag_hit == 0){
             temp[(pageFaults - 1) % frame_cnt] = randoms[m];
         }
 
@@ -556,6 +552,7 @@ void fifo(){
             else
                 printf(" - \t");
         }
+        if(flag_hit == 0) fprintf(stdout, "page fault!");
     }
 
     printf("\nTotal Page Faults : %d\n", pageFaults);
@@ -688,7 +685,7 @@ void start(){
                 break;
             case 7: // ESC
                 esc();
-                // optimal();
+                optimal();
                 break;
             case 8: // ALL
                 fifo();
