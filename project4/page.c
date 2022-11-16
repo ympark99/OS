@@ -441,7 +441,7 @@ void optimal(){
     }
     for(i = 0; i < ps_num; i++){
         flag1 = flag2 = 0;
-        
+        // page hit
         for(j = 0; j < frame_cnt; j++){
             if(frames[j] == randoms[i]){
                 flag1 = flag2 = 1;
@@ -450,6 +450,7 @@ void optimal(){
         }
         
         if(flag1 == 0){
+            // 프레임 못채운 경우
             for(j = 0; j < frame_cnt; j++){
                 if(frames[j] == -1){
                     faults++;
@@ -460,8 +461,7 @@ void optimal(){
             }    
         }        
         if(flag2 == 0){
-            flag3 =0;
-        
+            flag3 = 0;        
             for(j = 0; j < frame_cnt; j++){
                 temp[j] = -1;
             
@@ -471,16 +471,14 @@ void optimal(){
                         break;
                     }
                 }
-            }
-            
+            }            
             for(j = 0; j < frame_cnt; j++){
                 if(temp[j] == -1){
                     pos = j;
                     flag3 = 1;
                     break;
                 }
-            }
-            
+            }            
             if(flag3 == 0){
                 max = temp[0];
                 pos = 0;
@@ -504,6 +502,7 @@ void optimal(){
             else
                 printf(" - \t");
         }
+        if(flag1 == 0 || flag2 == 0) fprintf(stdout, "page fault!");
     }
     
     printf("\nTotal Page Faults : %d\n", faults);
