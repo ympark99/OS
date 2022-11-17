@@ -24,7 +24,7 @@ void esc(){
     int idx = 0;
     int done;
     int faults = 0;
-    int temp; // pointer keep
+    int temp; // 포인터 저장
 
     int frames[frame_cnt], reference_bit[frame_cnt], modify_bit[frame_cnt];
 
@@ -34,7 +34,7 @@ void esc(){
 
     fprintf(stdout, "Incoming  \t");
     fprintf(fp, "Incoming  \t");
-    for(int i = 0; i < frame_cnt; i++){
+    for(i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
         fprintf(fp, "frame%d \t", i+1);
     }
@@ -55,11 +55,9 @@ void esc(){
             }
         }
 
-        // ref = search_frames(frames, randoms[i], frame_cnt);
-        if (ref < 0){ // page fault 발생
+        if(ref < 0){ // page fault 발생
             isFault = true;
             if (idx < frame_cnt){ // 아직 프레임 못 채웠을때
-                // printf("REPLACING %d WITH %d AT: %d\n", frames[i], randoms[i], idx);
                 frames[idx] = randoms[i];
                 reference_bit[idx] = 1; // R bit 1로 고정
                 modify_bit[idx] = rw[i];
@@ -85,7 +83,7 @@ void esc(){
 
                 // 우선 순위 같으면, 먼저 탐색한 순서로 처리
                 // 00 우선 검사
-                for (j = 0; j < frame_cnt; j++){
+                for(j = 0; j < frame_cnt; j++){
                     // 00 1순위
                     if (reference_bit[pointer] == 0 && modify_bit[pointer] == 0){
                         done = 1;
@@ -94,7 +92,7 @@ void esc(){
                     pointer = (pointer + 1) % (frame_cnt);
                 }
                 // 01 검사
-                if (done == 0){
+                if(done == 0){
                     pointer = temp;
                     for (j = 0; j < frame_cnt; j++){
                         if (reference_bit[pointer] == 0 && modify_bit[pointer] == 1){
@@ -105,7 +103,7 @@ void esc(){
                     }
                 }
                 // 10검사
-                if (done == 0){
+                if(done == 0){
                     pointer = temp;
                     for (j = 0; j < frame_cnt; j++){
                         if (reference_bit[pointer] == 1 && modify_bit[pointer] == 0){
@@ -116,7 +114,7 @@ void esc(){
                     }
                 }
                 // 11검사
-                if (done == 0){
+                if(done == 0){
                     pointer = temp;
                     for (j = 0; j < frame_cnt; j++){
                         if (reference_bit[pointer] == 1 && modify_bit[pointer] == 1){
@@ -125,23 +123,20 @@ void esc(){
                         pointer = (pointer + 1) % (frame_cnt);
                     }
                 }
-
-                // do this no matter what loop breaks
                 frames[pointer] = randoms[i];
                 reference_bit[pointer] = 1; // R bit 1로 고정
                 modify_bit[pointer] = rw[i];
-                // pointer = (pointer + 1) % (frame_cnt);
             }
             faults++;
         }
-        else if (ref >= 0){ // page hit
+        else if(ref >= 0){ // page hit
             reference_bit[ref] = 1; // R bit 1로 고정
             if (rw[i] == 1)
                 modify_bit[ref] = 1;
             else modify_bit[ref] = 0;
         }
-
-        for (int k = 0; k < frame_cnt; k++){
+        // 시뮬레이션 결과 출력
+        for(int k = 0; k < frame_cnt; k++){
             if(frames[k] != -1){
                 printf("%d|%d%d\t", frames[k], reference_bit[k], modify_bit[k]);
                 fprintf(fp ,"%d|%d%d\t", frames[k], reference_bit[k], modify_bit[k]);
@@ -170,12 +165,10 @@ void sc(){
     fprintf(stdout, "\n Second Chance\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    // counter
     int i, j, ref;
     int pointer = 0;
     int idx = 0;
     int faults = 0;
-    // the "frames" to keep track of memory
     int frames[frame_cnt], reference_bit[frame_cnt];
 
     memset(frames, -1, sizeof(frames));
@@ -183,7 +176,7 @@ void sc(){
 
     fprintf(stdout, "Incoming  \t");
     fprintf(fp, "Incoming  \t");
-    for(int i = 0; i < frame_cnt; i++){
+    for(i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
         fprintf(fp, "frame%d \t", i+1);
     }
@@ -203,9 +196,8 @@ void sc(){
             }
         }
 
-        if (ref < 0){ // 같은 frame 없을때
+        if(ref < 0){ // 같은 frame 없을때
             if (idx < frame_cnt){ // 아직 프레임 못 채웠을때
-                // printf("REPLACING %d WITH %d AT: %d\n", frames[i], randoms[i], idx);
                 frames[idx] = randoms[i];
                 reference_bit[idx] = 0; // 참조비트 0
                 idx++;
@@ -229,11 +221,11 @@ void sc(){
                 pointer = (pointer + 1) % (frame_cnt); // 다음으로 이동
             }
         }
-        else if (ref >= 0){ // page hit
+        else if(ref >= 0){ // page hit
             reference_bit[ref] = 1; // 참조비트 1로 설정
         }
 
-        for (int k = 0; k < frame_cnt; k++){
+        for(int k = 0; k < frame_cnt; k++){
             if(frames[k] != -1){
                 printf("%d|%d\t", frames[k], reference_bit[k]);
                 fprintf(fp, "%d|%d\t\t", frames[k], reference_bit[k]);
@@ -280,17 +272,14 @@ void lfu(){
     fprintf(stdout, "\n LFU\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    int i, j, k, frames[frame_cnt], move = 0, flag, faults = 0, count1[frame_cnt], repindex, leastcount;
+    int i, j, k, frames[frame_cnt], pointer = 0, flag, faults = 0, freq[frame_cnt], idx, min_cnt;
 
-    memset(count1, 0, sizeof(count1));
-
-    for (i = 0; i < frame_cnt; i++){
-        frames[i] = -1;
-    }
+    memset(freq, 0, sizeof(freq));
+    memset(frames, -1, sizeof(frames));
     
     fprintf(stdout, "Incoming  \t");
     fprintf(fp, "Incoming  \t");
-    for(int i = 0; i < frame_cnt; i++){
+    for(i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
         fprintf(fp, "frame%d \t", i+1);
     }
@@ -305,33 +294,31 @@ void lfu(){
             // page hit
             if (randoms[i] == frames[j]){
                 flag = 1;
-                count1[j]++;
+                freq[j]++;
                 lfu_print(frame_cnt, frames, flag, fp);
                 break;
             }
         }
-        // 다 못채운경우
+        // 다 못채운경우 && page fault
         if (flag == 0 && faults < frame_cnt){
-            frames[move] = randoms[i];
-            count1[move] = 1;
-            move = (move + 1) % frame_cnt;
+            frames[pointer] = randoms[i];
+            freq[pointer] = 1;
+            pointer = (pointer + 1) % frame_cnt;
             faults++;
             lfu_print(frame_cnt, frames, flag, fp);
         }
         else if (flag == 0){
-            repindex = 0;
-            leastcount = count1[0];
-            for (j = 1; j < frame_cnt; j++)
-            {
-                if (count1[j] < leastcount)
-                {
-                    repindex = j;
-                    leastcount = count1[j];
+            idx = 0;
+            min_cnt = freq[0];
+            for (j = 1; j < frame_cnt; j++){
+                // 가장 적게 사용한 것 탐색
+                if(freq[j] < min_cnt){
+                    idx = j;
+                    min_cnt = freq[j];
                 }
             }
-
-            frames[repindex] = randoms[i];
-            count1[repindex] = 1;
+            frames[idx] = randoms[i];
+            freq[idx] = 1;
             faults++;
             lfu_print(frame_cnt, frames, flag, fp);
         }
@@ -343,12 +330,12 @@ void lfu(){
 }
 
 // lru 찾아줌
-int findLRU(int time[], int n){
-    int i, minimum = time[0], pos = 0;
+int findLRU(int recent[], int n){
+    int i, min_num = recent[0], pos = 0;
     
     for(i = 1; i < n; i++){
-        if(time[i] < minimum){
-            minimum = time[i];
+        if(recent[i] < min_num){
+            min_num = recent[i];
             pos = i;
         }
     }
@@ -361,11 +348,10 @@ void lru(){
     fprintf(stdout, "\n LRU\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    int frames[frame_cnt], counter = 0, time[10], flag1, flag2, i, j, pos, faults = 0;
+    int frames[frame_cnt], time_cnt = 0, recent[frame_cnt], flag1, flag2, i, j, pos, faults = 0;
 
-    for(i = 0; i < frame_cnt; i++){
-        frames[i] = -1;
-    }
+    memset(frames, -1, sizeof(frames));
+    memset(frames, -1, sizeof(recent));
 
     fprintf(stdout, "Incoming  \t");
     fprintf(fp, "Incoming  \t");
@@ -379,8 +365,8 @@ void lru(){
         // page hit
         for(j = 0; j < frame_cnt; j++){
             if(frames[j] == randoms[i]){
-                counter++;
-                time[j] = counter;
+                time_cnt++;
+                recent[j] = time_cnt;
                 flag1 = flag2 = 1;
                 break;
             }
@@ -388,24 +374,24 @@ void lru(){
             
         if(flag1 == 0){
             for(j = 0; j < frame_cnt; j++){
-                // 아직 다 못채운 경우
+                // 아직 다 못채운 경우 && page fault
                 if(frames[j] == -1){
-                    counter++;
+                    time_cnt++;
                     faults++;
                     frames[j] = randoms[i];
-                    time[j] = counter;
+                    recent[j] = time_cnt;
                     flag2 = 1;
                     break;
                 }
             }
         }
-            
+        // page fault
         if(flag2 == 0){
-            pos = findLRU(time, frame_cnt);
-            counter++;
+            pos = findLRU(recent, frame_cnt);
+            time_cnt++;
             faults++;
             frames[pos] = randoms[i];
-            time[pos] = counter;
+            recent[pos] = time_cnt;
         }
 
         printf("\n");
@@ -440,24 +426,23 @@ void lifo(){
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
     int faults = 0;
-    int m, n, flag_hit;
+    int i, j, flag_hit;
 
     fprintf(stdout, "Incoming  \t");
     fprintf(fp, "Incoming  \t");
-    for(int i = 0; i < frame_cnt; i++){
+    for(i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
         fprintf(fp, "frame%d \t", i+1);
     }
     int frames[frame_cnt];
-    for(m = 0; m < frame_cnt; m++){
-        frames[m] = -1;
-    }
+    memset(frames, -1, sizeof(frames));
 
-    for(m = 0; m < ps_num; m++){
+    for(i = 0; i < ps_num; i++){
         flag_hit = 0;
 
-        for(n = 0; n < frame_cnt; n++){
-            if(randoms[m] == frames[n]){
+        for(j = 0; j < frame_cnt; j++){
+            // page hit시 faults 그대로
+            if(randoms[i] == frames[j]){
                 flag_hit++;
                 faults--;
             }
@@ -466,20 +451,20 @@ void lifo(){
         
         // 아직 다 못채운경우
         if((faults < frame_cnt) && (flag_hit == 0)){
-            frames[(faults - 1) % frame_cnt] = randoms[m];
+            frames[(faults - 1) % frame_cnt] = randoms[i];
         }
         else if(flag_hit == 0){
-            frames[frame_cnt - 1] = randoms[m];
+            frames[frame_cnt - 1] = randoms[i]; // 맨 마지막 교체
         }
 
         printf("\n");
         fprintf(fp, "\n");
-        printf("%d\t\t", randoms[m]);
-        fprintf(fp, "%d\t\t\t", randoms[m]);
-        for(n = 0; n < frame_cnt; n++){
-            if(frames[n] != -1){
-                printf(" %d\t", frames[n]);
-                fprintf(fp, " %d\t\t", frames[n]);
+        printf("%d\t\t", randoms[i]);
+        fprintf(fp, "%d\t\t\t", randoms[i]);
+        for(j = 0; j < frame_cnt; j++){
+            if(frames[j] != -1){
+                printf(" %d\t", frames[j]);
+                fprintf(fp, " %d\t\t", frames[j]);
             }
             else{
                 printf(" - \t");
@@ -505,12 +490,13 @@ void optimal(){
     fprintf(stdout, "\n Optimal\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    int frames[frame_cnt], temp[frame_cnt], flag1, flag2, flag3, i, j, k, pos, max, faults = 0;
+    int frames[frame_cnt], temp[frame_cnt], flag1, flag2, flag3, i, j, k, pos, max;
+    int faults = 0;
     memset(frames, -1, sizeof(frames));
 
     fprintf(stdout, "Incoming  \t");
     fprintf(fp, "Incoming  \t");
-    for(int i = 0; i < frame_cnt; i++){
+    for(i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
         fprintf(fp, "frame%d \t", i+1);
     }
@@ -603,23 +589,23 @@ void fifo(){
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
     int faults = 0;
-    int m, n, flag_hit;
+    int i, j, flag_hit;
 
     fprintf(stdout, "Incoming  \t");
     fprintf(fp, "Incoming  \t");
-    for(int i = 0; i < frame_cnt; i++){
+    for(i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
         fprintf(fp, "frame%d \t", i+1);
     }
     int frames[frame_cnt];
     memset(frames, -1, sizeof(frames));
 
-    for(m = 0; m < ps_num; m++){
+    for(i = 0; i < ps_num; i++){
         flag_hit = 0;
 
-        for(n = 0; n < frame_cnt; n++){
+        for(j = 0; j < frame_cnt; j++){
             // page hit
-            if(randoms[m] == frames[n]){
+            if(randoms[i] == frames[j]){
                 flag_hit++;
                 faults--;
             }
@@ -627,17 +613,17 @@ void fifo(){
         faults++;
         // page fault
         if(flag_hit == 0){
-            frames[(faults - 1) % frame_cnt] = randoms[m];
+            frames[(faults - 1) % frame_cnt] = randoms[i];
         }
 
         printf("\n");
         fprintf(fp, "\n");
-        printf("%d\t\t", randoms[m]);
-        fprintf(fp, "%d\t\t\t", randoms[m]);
-        for(n = 0; n < frame_cnt; n++){
-            if(frames[n] != -1){
-                printf(" %d\t", frames[n]);
-                fprintf(fp, " %d\t\t", frames[n]);
+        printf("%d\t\t", randoms[i]);
+        fprintf(fp, "%d\t\t\t", randoms[i]);
+        for(j = 0; j < frame_cnt; j++){
+            if(frames[j] != -1){
+                printf(" %d\t", frames[j]);
+                fprintf(fp, " %d\t\t", frames[j]);
             }
             else{
                 printf(" - \t");
