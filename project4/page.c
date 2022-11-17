@@ -16,6 +16,7 @@ char filename[BUF_SIZE];
 //todo : ps_num 500, rand 30
 
 void esc(){
+    FILE *fp = fopen("esc_output.txt", "w");
     fprintf(stdout, "\n Enhanced Second Chance\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");    
     int i, j, ref;
@@ -32,15 +33,19 @@ void esc(){
     memset(modify_bit, -1, sizeof(modify_bit));
 
     fprintf(stdout, "Incoming  \t");
+    fprintf(fp, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
+        fprintf(fp, "frame%d \t", i+1);
     }
-    fprintf(stdout, "\n");
+    printf("\n");
+    fprintf(fp, "\n");
 
     for(i = 0; i < ps_num; i++){
         bool isFault = false;
 
         printf("%d|1%d\t\t", randoms[i], rw[i]);
+        fprintf(fp, "%d|1%d\t\t", randoms[i], rw[i]);
         ref = -1;
         // frame 탐색
         for(int j = 0; j < frame_cnt; j++){
@@ -139,18 +144,29 @@ void esc(){
         for (int k = 0; k < frame_cnt; k++){
             if(frames[k] != -1){
                 printf("%d|%d%d\t", frames[k], reference_bit[k], modify_bit[k]);
+                fprintf(fp ,"%d|%d%d\t", frames[k], reference_bit[k], modify_bit[k]);
             }
-            else
+            else{
                 printf(" - \t");
+                fprintf(fp, " - \t\t");
+            }
         }
-        if(isFault) fprintf(stdout, "page fault!");
+        if(isFault){
+            fprintf(stdout, "page fault!");
+            fprintf(fp, "page fault!");
+        }
         printf("\n");
+        fprintf(fp, "\n");
     }
     printf("Total Page Faults : %d\n", faults);
+    fprintf(fp, "Total Page Faults : %d\n", faults);
+    fprintf(stdout, "esc_output.txt에 시뮬레이션이 저장되었습니다.\n");
+    fclose(fp);
 }
 
 // second chance : 참조비트 1로 만들고 그 비트부터 검사
 void sc(){
+    FILE *fp = fopen("sc_output.txt", "w");
     fprintf(stdout, "\n Second Chance\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
@@ -166,14 +182,18 @@ void sc(){
     memset(reference_bit, -1, sizeof(reference_bit));
 
     fprintf(stdout, "Incoming  \t");
+    fprintf(fp, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
+        fprintf(fp, "frame%d \t", i+1);
     }
-    fprintf(stdout, "\n");
+    printf("\n");
+    fprintf(fp, "\n");
 
     for(i = 0; i < ps_num; i++){
         bool isFault = false;
         printf("%d\t\t", randoms[i] );
+        fprintf(fp, "%d\t\t\t", randoms[i]);
         ref = -1;
         // frame 탐색
         for(int j = 0; j < frame_cnt; j++){
@@ -216,31 +236,47 @@ void sc(){
         for (int k = 0; k < frame_cnt; k++){
             if(frames[k] != -1){
                 printf("%d|%d\t", frames[k], reference_bit[k]);
+                fprintf(fp, "%d|%d\t\t", frames[k], reference_bit[k]);
             }
-            else
+            else{
                 printf(" - \t");
+                fprintf(fp, " - \t\t");
+            }
         }
-        if(isFault) fprintf(stdout, "page fault!");
+        if(isFault){
+            fprintf(stdout, "page fault!");
+            fprintf(fp, "page fault!");
+        }
         printf("\n");
+        fprintf(fp, "\n");
     }
     printf("Total Page Faults : %d\n", faults);
+    fprintf(fp, "Total Page Faults : %d\n", faults);
+    fprintf(stdout, "sc_output.txt에 시뮬레이션이 저장되었습니다.\n");
+    fclose(fp);
 }
 
 // lfu print
-void lfu_print(int frame_cnt, int frames[], int flag){
+void lfu_print(int frame_cnt, int frames[], int flag, FILE *fp){
     int j;
     for (j = 0; j < frame_cnt; j++){
-            if(frames[j] != -1)
+            if(frames[j] != -1){
                 printf("%d\t", frames[j]);
-            else
+                fprintf(fp, " %d\t\t", frames[j]);
+            }
+            else{
                 printf(" - \t");
+                fprintf(fp, " - \t\t");
+            }
     }
     if(flag == 0) fprintf(stdout, "page fault!");
     printf("\n");
+    fprintf(fp, "\n");
 }
 
 // lfu : 카운터 같으면 가장 앞에거
 void lfu(){
+    FILE *fp = fopen("lfu_output.txt", "w");
     fprintf(stdout, "\n LFU\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
@@ -253,20 +289,24 @@ void lfu(){
     }
     
     fprintf(stdout, "Incoming  \t");
+    fprintf(fp, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
+        fprintf(fp, "frame%d \t", i+1);
     }
     printf("\n");
+    fprintf(fp, "\n");
 
     for (i = 0; i < ps_num; i++){
         printf("%d\t\t", randoms[i]);
+        fprintf(fp, "%d\t\t\t", randoms[i]);
         flag = 0;
         for (j = 0; j < frame_cnt; j++){
             // page hit
             if (randoms[i] == frames[j]){
                 flag = 1;
                 count1[j]++;
-                lfu_print(frame_cnt, frames, flag);
+                lfu_print(frame_cnt, frames, flag, fp);
                 break;
             }
         }
@@ -276,7 +316,7 @@ void lfu(){
             count1[move] = 1;
             move = (move + 1) % frame_cnt;
             faults++;
-            lfu_print(frame_cnt, frames, flag);
+            lfu_print(frame_cnt, frames, flag, fp);
         }
         else if (flag == 0){
             repindex = 0;
@@ -293,10 +333,13 @@ void lfu(){
             frames[repindex] = randoms[i];
             count1[repindex] = 1;
             faults++;
-            lfu_print(frame_cnt, frames, flag);
+            lfu_print(frame_cnt, frames, flag, fp);
         }
     }
-    printf("Total Page Faults : %d\n", faults);
+    printf("\nTotal Page Faults : %d\n", faults);
+    fprintf(fp, "\nTotal Page Faults : %d\n", faults);
+    fprintf(stdout, "lfu_output.txt에 시뮬레이션이 저장되었습니다.\n");
+    fclose(fp);
 }
 
 // lru 찾아줌
@@ -314,6 +357,7 @@ int findLRU(int time[], int n){
 
 // lru
 void lru(){
+    FILE *fp = fopen("lru_output.txt", "w");
     fprintf(stdout, "\n LRU\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
@@ -324,8 +368,10 @@ void lru(){
     }
 
     fprintf(stdout, "Incoming  \t");
+    fprintf(fp, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
+        fprintf(fp, "frame%d \t", i+1);
     }
 
     for(i = 0; i < ps_num; i++){
@@ -363,29 +409,44 @@ void lru(){
         }
 
         printf("\n");
+        fprintf(fp, "\n");
         printf("%d\t\t", randoms[i]);
+        fprintf(fp, "%d\t\t\t", randoms[i]);
         for(j = 0; j < frame_cnt; j++){
-            if(frames[j] != -1)
+            if(frames[j] != -1){
                 printf("%d\t", frames[j]);
-            else
+                fprintf(fp, " %d\t\t", frames[j]);
+            }
+            else{
                 printf(" - \t");
+                fprintf(fp, " - \t\t");
+            }
         }
-        if(flag1 == 0 || flag2 == 0) fprintf(stdout, "page fault!");
+        if(flag1 == 0 || flag2 == 0){
+            fprintf(stdout, "page fault!");
+            fprintf(fp, "page fault!");
+        }
     }
-    printf("\nTotal Page Faults = %d\n", faults);
+    printf("\nTotal Page Faults : %d\n", faults);
+    fprintf(fp, "\nTotal Page Faults : %d\n", faults);
+    fprintf(stdout, "lru_output.txt에 시뮬레이션이 저장되었습니다.\n");
+    fclose(fp);
 }
 
 // lifo
 void lifo(){
+    FILE *fp = fopen("lifo_output.txt", "w");
     fprintf(stdout, "\n LIFO\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    int pageFaults = 0;
+    int faults = 0;
     int m, n, flag_hit;
 
     fprintf(stdout, "Incoming  \t");
+    fprintf(fp, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
+        fprintf(fp, "frame%d \t", i+1);
     }
     int temp[frame_cnt];
     for(m = 0; m < frame_cnt; m++){
@@ -398,12 +459,12 @@ void lifo(){
         for(n = 0; n < frame_cnt; n++){
             if(randoms[m] == temp[n]){
                 flag_hit++;
-                pageFaults--;
+                faults--;
             }
         }
-        pageFaults++;
+        faults++;
         
-        if((pageFaults <= frame_cnt) && (flag_hit == 0)){
+        if((faults <= frame_cnt) && (flag_hit == 0)){
             temp[m] = randoms[m];
         }
         else if(flag_hit == 0){
@@ -411,22 +472,35 @@ void lifo(){
         }
 
         printf("\n");
+        fprintf(fp, "\n");
         printf("%d\t\t", randoms[m]);
+        fprintf(fp, "%d\t\t\t", randoms[m]);
         for(n = 0; n < frame_cnt; n++){
-            if(temp[n] != -1)
+            if(temp[n] != -1){
                 printf(" %d\t", temp[n]);
-            else
+                fprintf(fp, " %d\t\t", temp[n]);
+            }
+            else{
                 printf(" - \t");
+                fprintf(fp, " - \t\t");
+            }
         }
-        if(flag_hit == 0) fprintf(stdout, "page fault!");
+        if(flag_hit == 0){
+            fprintf(stdout, "page fault!");
+            fprintf(fp, "page fault!");
+        }
     }
 
-    printf("\nTotal Page Faults : %d\n", pageFaults);
+    printf("\nTotal Page Faults : %d\n", faults);
+    fprintf(fp, "\nTotal Page Faults : %d\n", faults);
+    fprintf(stdout, "lifo_output.txt에 시뮬레이션이 저장되었습니다.\n");
+    fclose(fp);
     return;
 }
 
 // optimal
 void optimal(){
+    FILE *fp = fopen("optimal_output.txt", "w");
     fprintf(stdout, "\n Optimal\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
@@ -434,8 +508,10 @@ void optimal(){
     memset(frames, -1, sizeof(frames));
 
     fprintf(stdout, "Incoming  \t");
+    fprintf(fp, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
+        fprintf(fp, "frame%d \t", i+1);
     }
     for(i = 0; i < ps_num; i++){
         flag1 = flag2 = 0;
@@ -494,30 +570,45 @@ void optimal(){
         }
         
         printf("\n");
+        fprintf(fp, "\n");
         printf("%d\t\t", randoms[i]);
+        fprintf(fp, "%d\t\t\t", randoms[i]);
         for(j = 0; j < frame_cnt; j++){
-            if(frames[j] != -1)
+            if(frames[j] != -1){
                 printf("%d\t", frames[j]);
-            else
+                fprintf(fp, " %d\t\t", frames[j]);
+            }
+            else{
                 printf(" - \t");
+                fprintf(fp, " - \t\t");
+            }
         }
-        if(flag1 == 0 || flag2 == 0) fprintf(stdout, "page fault!");
+        if(flag1 == 0 || flag2 == 0){
+            fprintf(stdout, "page fault!");
+            fprintf(fp, "page fault!");
+        }
     }
     
     printf("\nTotal Page Faults : %d\n", faults);
+    fprintf(fp, "\nTotal Page Faults : %d\n", faults);
+    fprintf(stdout, "optimal_output.txt에 시뮬레이션이 저장되었습니다.\n");
+    fclose(fp);
 }
 
 // FIFO
 void fifo(){
+    FILE *fp = fopen("fifo_output.txt", "w");
     fprintf(stdout, "\n FIFO\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
-    int pageFaults = 0;
+    int faults = 0;
     int m, n, flag_hit;
 
     fprintf(stdout, "Incoming  \t");
+    fprintf(fp, "Incoming  \t");
     for(int i = 0; i < frame_cnt; i++){
         fprintf(stdout, "frame%d \t", i+1);
+        fprintf(fp, "frame%d \t", i+1);
     }
     int frames[frame_cnt];
     memset(frames, -1, sizeof(frames));
@@ -528,30 +619,42 @@ void fifo(){
         for(n = 0; n < frame_cnt; n++){
             if(randoms[m] == frames[n]){
                 flag_hit++;
-                pageFaults--;
+                faults--;
             }
         }
-        pageFaults++;
+        faults++;
         
-        if((pageFaults <= frame_cnt) && (flag_hit == 0)){
+        if((faults <= frame_cnt) && (flag_hit == 0)){
             frames[m] = randoms[m];
         }
         else if(flag_hit == 0){
-            frames[(pageFaults - 1) % frame_cnt] = randoms[m];
+            frames[(faults - 1) % frame_cnt] = randoms[m];
         }
 
         printf("\n");
+        fprintf(fp, "\n");
         printf("%d\t\t", randoms[m]);
+        fprintf(fp, "%d\t\t\t", randoms[m]);
         for(n = 0; n < frame_cnt; n++){
-            if(frames[n] != -1)
+            if(frames[n] != -1){
                 printf(" %d\t", frames[n]);
-            else
+                fprintf(fp, " %d\t\t", frames[n]);
+            }
+            else{
                 printf(" - \t");
+                fprintf(fp, " - \t\t");
+            }
         }
-        if(flag_hit == 0) fprintf(stdout, "page fault!");
+        if(flag_hit == 0){
+            fprintf(stdout, "page fault!");
+            fprintf(fp, "page fault!");
+        }
     }
 
-    printf("\nTotal Page Faults : %d\n", pageFaults);
+    printf("\nTotal Page Faults : %d\n", faults);
+    fprintf(fp, "\nTotal Page Faults : %d\n", faults);
+    fprintf(stdout, "fifo_output.txt에 시뮬레이션이 저장되었습니다.\n");
+    fclose(fp);
     return;
 }
 
@@ -629,12 +732,6 @@ void start(){
         }
         else break;
     }
-
-    // // 랜덤으로 스트림 생성
-    // for(int i = 0; i < RAND_MIN; i++){
-    //     randoms[i] = rand() % 6 + 1;
-    //     rw[i] = rand() % 2;
-    // }
 
     // 1 선택시 랜덤생성 후 출력
     if(inputType == 1){
