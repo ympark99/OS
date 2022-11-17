@@ -434,6 +434,7 @@ void lru(){
 }
 
 // lifo
+// todo : lifo 프레임 비워있을때 그대로?
 void lifo(){
     FILE *fp = fopen("lifo_output.txt", "w");
     fprintf(stdout, "\n LIFO\n");
@@ -464,7 +465,7 @@ void lifo(){
         }
         faults++;
         
-        if((faults <= frame_cnt) && (flag_hit == 0)){
+        if((faults < frame_cnt) && (flag_hit == 0)){
             temp[m] = randoms[m];
         }
         else if(flag_hit == 0){
@@ -623,8 +624,8 @@ void fifo(){
             }
         }
         faults++;
-        
-        if((faults <= frame_cnt) && (flag_hit == 0)){
+
+        if((faults < frame_cnt) && (flag_hit == 0)){
             frames[m] = randoms[m];
         }
         else if(flag_hit == 0){
