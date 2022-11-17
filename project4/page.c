@@ -434,7 +434,6 @@ void lru(){
 }
 
 // lifo
-// todo : lifo 프레임 비워있을때 그대로?
 void lifo(){
     FILE *fp = fopen("lifo_output.txt", "w");
     fprintf(stdout, "\n LIFO\n");
@@ -449,27 +448,28 @@ void lifo(){
         fprintf(stdout, "frame%d \t", i+1);
         fprintf(fp, "frame%d \t", i+1);
     }
-    int temp[frame_cnt];
+    int frames[frame_cnt];
     for(m = 0; m < frame_cnt; m++){
-        temp[m] = -1;
+        frames[m] = -1;
     }
 
     for(m = 0; m < ps_num; m++){
         flag_hit = 0;
 
         for(n = 0; n < frame_cnt; n++){
-            if(randoms[m] == temp[n]){
+            if(randoms[m] == frames[n]){
                 flag_hit++;
                 faults--;
             }
         }
         faults++;
         
+        // 아직 다 못채운경우
         if((faults < frame_cnt) && (flag_hit == 0)){
-            temp[m] = randoms[m];
+            frames[(faults - 1) % frame_cnt] = randoms[m];
         }
         else if(flag_hit == 0){
-            temp[frame_cnt - 1] = randoms[m];
+            frames[frame_cnt - 1] = randoms[m];
         }
 
         printf("\n");
@@ -477,9 +477,9 @@ void lifo(){
         printf("%d\t\t", randoms[m]);
         fprintf(fp, "%d\t\t\t", randoms[m]);
         for(n = 0; n < frame_cnt; n++){
-            if(temp[n] != -1){
-                printf(" %d\t", temp[n]);
-                fprintf(fp, " %d\t\t", temp[n]);
+            if(frames[n] != -1){
+                printf(" %d\t", frames[n]);
+                fprintf(fp, " %d\t\t", frames[n]);
             }
             else{
                 printf(" - \t");
@@ -618,17 +618,15 @@ void fifo(){
         flag_hit = 0;
 
         for(n = 0; n < frame_cnt; n++){
+            // page hit
             if(randoms[m] == frames[n]){
                 flag_hit++;
                 faults--;
             }
         }
         faults++;
-
-        if((faults < frame_cnt) && (flag_hit == 0)){
-            frames[m] = randoms[m];
-        }
-        else if(flag_hit == 0){
+        // page fault
+        if(flag_hit == 0){
             frames[(faults - 1) % frame_cnt] = randoms[m];
         }
 
