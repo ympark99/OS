@@ -13,7 +13,7 @@ int ps_num = 20;
 int rw[RAND_MIN]; // 0 -> R, 1 -> W
 char filename[BUF_SIZE];
 
-//todo : ps_num 500, rand 30
+//todo : ps_num 500, rand 30, RAND_MIN 500
 
 void esc(){
     FILE *fp = fopen("esc_output.txt", "w");
@@ -102,22 +102,22 @@ void esc(){
                         pointer = (pointer + 1) % (frame_cnt);
                     }
                 }
-                // 10검사
+                // 00 다시 검사
                 if(done == 0){
                     pointer = temp;
                     for (j = 0; j < frame_cnt; j++){
-                        if (reference_bit[pointer] == 1 && modify_bit[pointer] == 0){
+                        if (reference_bit[pointer] == 0 && modify_bit[pointer] == 0){
                             done = 1;
                             break;
                         }
                         pointer = (pointer + 1) % (frame_cnt);
                     }
                 }
-                // 11검사
+                // 01 다시 검사
                 if(done == 0){
                     pointer = temp;
                     for (j = 0; j < frame_cnt; j++){
-                        if (reference_bit[pointer] == 1 && modify_bit[pointer] == 1){
+                        if (reference_bit[pointer] == 0 && modify_bit[pointer] == 1){
                             break;
                         }
                         pointer = (pointer + 1) % (frame_cnt);
