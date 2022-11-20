@@ -203,6 +203,7 @@ void sc(){
                 idx++;
                 isFault = true;
                 faults++;
+                pointer = (pointer + 1) % (frame_cnt); // 다음으로 이동
             }
             else{
                 for (j = 0; j < frame_cnt; j++){
@@ -272,6 +273,7 @@ void lfu(){
     fprintf(stdout, "\n LFU\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
+    // freq : 참조 횟수 저장 배열
     int i, j, k, frames[frame_cnt], pointer = 0, flag, faults = 0, freq[frame_cnt], idx, min_cnt;
 
     memset(freq, 0, sizeof(freq));
@@ -290,35 +292,36 @@ void lfu(){
         fprintf(stdout, "%d\t\t", randoms[i]);
         fprintf(fp, "%d\t\t\t", randoms[i]);
         flag = 0;
+        // 프레임을 순환하며 현재 들어온 페이지 스트링과 같은 페이지 스트링이 있는지 탐색(page hit)
         for (j = 0; j < frame_cnt; j++){
-            // page hit
             if (randoms[i] == frames[j]){
                 flag = 1;
                 freq[j]++;
-                lfu_print(frame_cnt, frames, flag, fp);
+                lfu_print(frame_cnt, frames, flag, fp); // 시뮬레이션 정보 출력 & 파일 정보 저장
                 break;
             }
         }
-        // 다 못채운경우 && page fault
+        // 아직 한 번도 페이지 스트링이 들어오지 않은 프레임이 있는지 탐색
         if (flag == 0 && faults < frame_cnt){
-            frames[pointer] = randoms[i];
-            freq[pointer] = 1;
-            pointer = (pointer + 1) % frame_cnt;
+            frames[pointer] = randoms[i]; // 페이지 교체
+            freq[pointer] = 1; // 처음 참조하므로 빈도 1
+            pointer = (pointer + 1) % frame_cnt; // 포인터 이동
             faults++;
             lfu_print(frame_cnt, frames, flag, fp);
         }
+        // page fault
         else if (flag == 0){
             idx = 0;
             min_cnt = freq[0];
             for (j = 1; j < frame_cnt; j++){
                 // 가장 적게 사용한 것 탐색
                 if(freq[j] < min_cnt){
-                    idx = j;
-                    min_cnt = freq[j];
+                    idx = j; // 인덱스 갱신
+                    min_cnt = freq[j]; // 최소 참조 횟수 갱신
                 }
             }
             frames[idx] = randoms[i];
-            freq[idx] = 1;
+            freq[idx] = 1; // 참조횟수 1로 리셋
             faults++;
             lfu_print(frame_cnt, frames, flag, fp);
         }
@@ -332,11 +335,11 @@ void lfu(){
 // lru 찾아줌
 int findLRU(int recent[], int n){
     int i, min_num = recent[0], pos = 0;
-    
+    // 프레임 개수만큼 반복
     for(i = 1; i < n; i++){
-        if(recent[i] < min_num){
-            min_num = recent[i];
-            pos = i;
+        if(recent[i] < min_num){ // 더 오래된 시간이면
+            min_num = recent[i]; // 가장 작은 값(오래된 시간) 갱신
+            pos = i; // 해당 인덱스 갱신
         }
     }
     return pos;
@@ -348,6 +351,8 @@ void lru(){
     fprintf(stdout, "\n LRU\n");
     fprintf(stdout, "-----------------------------------------------------------------------------\n");
 
+    // recent : 가장 최근에 사용했던 시간을 저장할 배열
+    // time_cnt : 시간 카운터
     int frames[frame_cnt], time_cnt = 0, recent[frame_cnt], flag1, flag2, i, j, pos, faults = 0;
 
     memset(frames, -1, sizeof(frames));
@@ -362,24 +367,25 @@ void lru(){
 
     for(i = 0; i < ps_num; i++){
         flag1 = flag2 = 0;
-        // page hit
+        // 프레임을 순환하며 현재 들어온 페이지 스트링과 같은 페이지 스트링이 있는지 탐색
         for(j = 0; j < frame_cnt; j++){
             if(frames[j] == randoms[i]){
-                time_cnt++;
-                recent[j] = time_cnt;
+                time_cnt++; // 시간 카운터 증가
+                recent[j] = time_cnt; // 가장 최근 시간 갱신
                 flag1 = flag2 = 1;
                 break;
             }
         }
             
         if(flag1 == 0){
+            // 아직 한 번도 페이지 스트링이 들어오지 않은 프레임이 있는지 탐색
             for(j = 0; j < frame_cnt; j++){
                 // 아직 다 못채운 경우 && page fault
                 if(frames[j] == -1){
-                    time_cnt++;
+                    time_cnt++; // 시간 카운터 증가
                     faults++;
                     frames[j] = randoms[i];
-                    recent[j] = time_cnt;
+                    recent[j] = time_cnt; // 시간 갱신
                     flag2 = 1;
                     break;
                 }
@@ -387,11 +393,11 @@ void lru(){
         }
         // page fault
         if(flag2 == 0){
-            pos = findLRU(recent, frame_cnt);
+            pos = findLRU(recent, frame_cnt); // 가장 오랫동안 사용하지 않았던 페이지 찾기
             time_cnt++;
             faults++;
-            frames[pos] = randoms[i];
-            recent[pos] = time_cnt;
+            frames[pos] = randoms[i]; // 페이지 교체
+            recent[pos] = time_cnt; // 시간 갱신
         }
 
         fprintf(stdout, "\n");
@@ -451,8 +457,11 @@ void lifo(){
         
         // 아직 다 못채운경우
         if((faults < frame_cnt) && (flag_hit == 0)){
+            // (페이지 카운터 -1 % 프레임 개수)를 하면 0부터 프레임 개수-1까지 
+            // page fault 카운터가 증가할 때마다 순차적으로 다음 인덱스를 가리키게 된다. (즉, 메모리에 올라온 순서대로 교체)
             frames[(faults - 1) % frame_cnt] = randoms[i];
         }
+        // page fault
         else if(flag_hit == 0){
             frames[frame_cnt - 1] = randoms[i]; // 맨 마지막 교체
         }
@@ -512,7 +521,9 @@ void optimal(){
         if(flag1 == 0){
             // 프레임 못채운 경우
             for(j = 0; j < frame_cnt; j++){
+                // 아직 한 번도 페이지 스트링이 들어오지 않은 프레임이 있는지 탐색
                 if(frames[j] == -1){
+                    // page fault 카운터를 1증가시키고 채워넣음, 다음 단계 실행 x
                     faults++;
                     frames[j] = randoms[i];
                     flag2 = 1;
@@ -523,9 +534,10 @@ void optimal(){
         if(flag2 == 0){
             flag3 = 0;        
             for(j = 0; j < frame_cnt; j++){
-                temp[j] = -1;
+                temp[j] = -1; // 해당 프레임 내 페이지 스트링 다음에 언제 사용하는지 인덱스 저장
             
                 for(k = i + 1; k < ps_num; k++){
+                    // 앞으로 올 페이지 스트링에서 다음에 언제 사용하는지 인덱스 저장
                     if(frames[j] == randoms[k]){
                         temp[j] = k;
                         break;
@@ -533,7 +545,7 @@ void optimal(){
                 }
             }            
             for(j = 0; j < frame_cnt; j++){
-                // 프레임 못채운 경우
+                // 앞으로 사용할 페이지가 없는 경우 교체할 페이지 확정
                 if(temp[j] == -1){
                     pos = j;
                     flag3 = 1;
@@ -547,12 +559,12 @@ void optimal(){
             
                 for(j = 1; j < frame_cnt; j++){
                     if(temp[j] > max){
-                        max = temp[j];
+                        max = temp[j]; // 가장 큰 값(인덱스)이 오랫동안 사용하지 않을 페이지
                         pos = j;
                     }
                 }            
             }
-            frames[pos] = randoms[i];
+            frames[pos] = randoms[i]; // 교체
             faults++;
         }
         
@@ -604,7 +616,7 @@ void fifo(){
         flag_hit = 0;
 
         for(j = 0; j < frame_cnt; j++){
-            // page hit
+            // 프레임을 순환하며 현재 들어온 페이지 스트링과 같은 페이지 스트링이 있는지 탐색(page hit)
             if(randoms[i] == frames[j]){
                 flag_hit++;
                 faults--;
@@ -613,9 +625,11 @@ void fifo(){
         faults++;
         // page fault
         if(flag_hit == 0){
+            // (페이지 폴트 카운터 -1 % 프레임 개수)를 하면 0부터 프레임 개수-1까지 page fault 카운터가 증가할 때마다 
+            // 순차적으로 다음 인덱스를 가리키게 된다. (즉, 메모리에 올라온 순서대로 교체)
             frames[(faults - 1) % frame_cnt] = randoms[i];
         }
-
+        // 파일 및 표준 출력
         fprintf(stdout, "\n");
         fprintf(fp, "\n");
         fprintf(stdout, "%d\t\t", randoms[i]);
