@@ -9,11 +9,11 @@
 int frame_cnt; // 프레임 수
 int inputType; // 1 -> 랜덤, 2 -> 파일
 int randoms[RAND_MIN];
-int ps_num = 20;
-int rw[RAND_MIN]; // 0 -> R, 1 -> W
+int ps_num = RAND_MIN;
+int rw[RAND_MIN];
 char filename[BUF_SIZE];
 
-//todo : ps_num 500, rand 30, RAND_MIN 500
+// 참조 페이지 스트림 30, page stream 개수 500 기준
 
 void esc(){
     FILE *fp = fopen("esc_output.txt", "w");
@@ -47,7 +47,7 @@ void esc(){
         fprintf(stdout, "%d|1%d\t\t", randoms[i], rw[i]);
         fprintf(fp, "%d|1%d\t\t", randoms[i], rw[i]);
         ref = -1;
-        // frame 탐색
+        // 프레임을 순환하며 현재 들어온 페이지 스트림과 같은 페이지 스트림이 있는지 탐색(page hit)
         for(int j = 0; j < frame_cnt; j++){
             if( randoms[i] == frames[j] ){
                 ref = j;
@@ -57,7 +57,8 @@ void esc(){
 
         if(ref < 0){ // page fault 발생
             isFault = true;
-            if (idx < frame_cnt){ // 아직 프레임 못 채웠을때
+            // 아직 한 번도 페이지 스트림이 들어오지 않은 프레임이 있는지 탐색
+            if (idx < frame_cnt){
                 frames[idx] = randoms[i];
                 reference_bit[idx] = 1; // R bit 1로 고정
                 modify_bit[idx] = rw[i];
@@ -159,7 +160,8 @@ void esc(){
     fclose(fp);
 }
 
-// second chance : 참조비트 1로 만들고 그 비트부터 검사
+// second chance
+// FIFO 기반 구현, 초기 참조비트 0으로 설정
 void sc(){
     FILE *fp = fopen("sc_output.txt", "w");
     fprintf(stdout, "\n Second Chance\n");
@@ -188,7 +190,7 @@ void sc(){
         fprintf(stdout, "%d\t\t", randoms[i] );
         fprintf(fp, "%d\t\t\t", randoms[i]);
         ref = -1;
-        // frame 탐색
+        // page hit 탐색
         for(int j = 0; j < frame_cnt; j++){
             if( randoms[i] == frames[j] ){
                 ref = j;
@@ -197,7 +199,8 @@ void sc(){
         }
 
         if(ref < 0){ // 같은 frame 없을때
-            if (idx < frame_cnt){ // 아직 프레임 못 채웠을때
+            // 아직 한 번도 페이지 스트림이 들어오지 않은 프레임이 있는지 탐색
+            if (idx < frame_cnt){
                 frames[idx] = randoms[i];
                 reference_bit[idx] = 0; // 참조비트 0
                 idx++;
@@ -292,7 +295,7 @@ void lfu(){
         fprintf(stdout, "%d\t\t", randoms[i]);
         fprintf(fp, "%d\t\t\t", randoms[i]);
         flag = 0;
-        // 프레임을 순환하며 현재 들어온 페이지 스트링과 같은 페이지 스트링이 있는지 탐색(page hit)
+        // 프레임을 순환하며 현재 들어온 페이지 스트림과 같은 페이지 스트림이 있는지 탐색(page hit)
         for (j = 0; j < frame_cnt; j++){
             if (randoms[i] == frames[j]){
                 flag = 1;
@@ -301,7 +304,7 @@ void lfu(){
                 break;
             }
         }
-        // 아직 한 번도 페이지 스트링이 들어오지 않은 프레임이 있는지 탐색
+        // 아직 한 번도 페이지 스트림이 들어오지 않은 프레임이 있는지 탐색
         if (flag == 0 && faults < frame_cnt){
             frames[pointer] = randoms[i]; // 페이지 교체
             freq[pointer] = 1; // 처음 참조하므로 빈도 1
@@ -367,7 +370,7 @@ void lru(){
 
     for(i = 0; i < ps_num; i++){
         flag1 = flag2 = 0;
-        // 프레임을 순환하며 현재 들어온 페이지 스트링과 같은 페이지 스트링이 있는지 탐색
+        // 프레임을 순환하며 현재 들어온 페이지 스트림과 같은 페이지 스트림이 있는지 탐색
         for(j = 0; j < frame_cnt; j++){
             if(frames[j] == randoms[i]){
                 time_cnt++; // 시간 카운터 증가
@@ -378,7 +381,7 @@ void lru(){
         }
             
         if(flag1 == 0){
-            // 아직 한 번도 페이지 스트링이 들어오지 않은 프레임이 있는지 탐색
+            // 아직 한 번도 페이지 스트림이 들어오지 않은 프레임이 있는지 탐색
             for(j = 0; j < frame_cnt; j++){
                 // 아직 다 못채운 경우 && page fault
                 if(frames[j] == -1){
@@ -521,7 +524,7 @@ void optimal(){
         if(flag1 == 0){
             // 프레임 못채운 경우
             for(j = 0; j < frame_cnt; j++){
-                // 아직 한 번도 페이지 스트링이 들어오지 않은 프레임이 있는지 탐색
+                // 아직 한 번도 페이지 스트림이 들어오지 않은 프레임이 있는지 탐색
                 if(frames[j] == -1){
                     // page fault 카운터를 1증가시키고 채워넣음, 다음 단계 실행 x
                     faults++;
@@ -534,10 +537,10 @@ void optimal(){
         if(flag2 == 0){
             flag3 = 0;        
             for(j = 0; j < frame_cnt; j++){
-                temp[j] = -1; // 해당 프레임 내 페이지 스트링 다음에 언제 사용하는지 인덱스 저장
+                temp[j] = -1; // 해당 프레임 내 페이지 스트림 다음에 언제 사용하는지 인덱스 저장
             
                 for(k = i + 1; k < ps_num; k++){
-                    // 앞으로 올 페이지 스트링에서 다음에 언제 사용하는지 인덱스 저장
+                    // 앞으로 올 페이지 스트림에서 다음에 언제 사용하는지 인덱스 저장
                     if(frames[j] == randoms[k]){
                         temp[j] = k;
                         break;
@@ -616,7 +619,7 @@ void fifo(){
         flag_hit = 0;
 
         for(j = 0; j < frame_cnt; j++){
-            // 프레임을 순환하며 현재 들어온 페이지 스트링과 같은 페이지 스트링이 있는지 탐색(page hit)
+            // 프레임을 순환하며 현재 들어온 페이지 스트림과 같은 페이지 스트림이 있는지 탐색(page hit)
             if(randoms[i] == frames[j]){
                 flag_hit++;
                 faults--;
@@ -739,7 +742,7 @@ void start(){
         fprintf(stdout, "--------------\n");
         // 랜덤으로 스트림 생성
         for(int i = 0; i < RAND_MIN; i++){
-            randoms[i] = rand() % 6 + 1;
+            randoms[i] = rand() % 30 + 1;
             rw[i] = rand() % 2;
 
             if(rw[i] == 0)
@@ -758,7 +761,7 @@ void start(){
         FILE *fp = fopen(filename, "w");
         // 파일에 랜덤으로 생성
         for (int i = 0; i < ps_num; i++){
-            fprintf(fp, "%d ", rand() % 6 + 1);
+            fprintf(fp, "%d ", rand() % 30 + 1);
             fprintf(fp, "%d", rand() % 2);
             fprintf(fp, "\n");
         }
