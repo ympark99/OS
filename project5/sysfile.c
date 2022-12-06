@@ -251,9 +251,10 @@ create(char *path, short type, short major, short minor)
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
-    if(type == T_FILE && ip->type == T_FILE)
+    // if(type == T_FILE && ip->type == T_FILE)
+    // T_CS
+    if((type == T_FILE && ip->type == T_FILE) || (type == T_CS && ip->type == T_CS))
       return ip;
-    // T_CS로?
     iunlockput(ip);
     return 0;
   }
@@ -297,8 +298,11 @@ sys_open(void)
   begin_op();
 
   if(omode & O_CREATE){
-    ip = create(path, T_FILE, 0, 0);
-    // T_CS 생성?
+    // T_CS
+    if(omode & O_CS){
+      ip = create(path, T_CS, 0, 0);  
+    }
+    else ip = create(path, T_FILE, 0, 0);
     if(ip == 0){
       end_op();
       return -1;
