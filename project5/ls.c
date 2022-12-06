@@ -42,7 +42,10 @@ ls(char *path)
   }
 
   switch(st.type){
-    // T_CS?
+  case T_CS:
+    printf(1, "%s %d %d %d\n", fmtname(path), st.type, st.ino, st.size);
+    break;
+
   case T_FILE:
     printf(1, "%s %d %d %d\n", fmtname(path), st.type, st.ino, st.size);
     break;
