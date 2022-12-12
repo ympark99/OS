@@ -107,11 +107,11 @@ int
 sys_fstat(void)
 {
   struct file *f;
-  struct stat *st;
+  struct stat *stat;
 
-  if(argfd(0, 0, &f) < 0 || argptr(1, (void*)&st, sizeof(*st)) < 0)
+  if(argfd(0, 0, &f) < 0 || argptr(1, (void*)&stat, sizeof(*stat)) < 0)
     return -1;
-  return filestat(f, st);
+  return filestat(f, stat);
 }
 
 // Create the path new as a link to the same inode as old.
@@ -251,7 +251,6 @@ create(char *path, short type, short major, short minor)
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
-    // if(type == T_FILE && ip->type == T_FILE)
     // T_CS
     if((type == T_FILE && ip->type == T_FILE) || (type == T_CS && ip->type == T_CS))
       return ip;
@@ -455,47 +454,36 @@ sys_printinfo(void)
   int fd;
   char *fname, ftype[5] = "";
   struct file *f;
-  struct stat st;
   struct inode *ip;
+  struct stat stat;
 
   if(argfd(0, &fd, &f) < 0 || argstr(1, &fname) < 0)
     return -1;
   
-  if(filestat(f, &st) < 0)
+  // stat 가져오기
+  if(filestat(f, &stat) < 0)
     return -1;
   
   ip = f->ip;
-  switch(st.type)
-  {
-    case 1 :
-      strncpy(ftype, "DIR", 3); // memmove
-      break;
-    case 2 :
-      strncpy(ftype, "FILE", 4);
-      break;
-    case 3 :
-      strncpy(ftype, "DEV", 3);
-      break;
-    case 4 :
-      strncpy(ftype, "CS", 2);
-      break;
-    default :
-      return -1;
-  }
+
+  if(stat.type == 1) memmove(ftype, "DIR", 3);
+  else if(stat.type == 2) memmove(ftype, "FILE", 4);
+  else if(stat.type == 3) memmove(ftype, "DEV", 3);
+  else if(stat.type == 4) memmove(ftype, "CS", 2);
+  else return -1;
 
   cprintf("FILE NAME: %s\n", fname);
-  cprintf("INODE NUM: %d\n", st.ino);
+  cprintf("INODE NUM: %d\n", stat.ino);
   cprintf("FILE TYPE: %s\n", ftype);
-  cprintf("FILE SIZE: %d Bytes\n", st.size);
+  cprintf("FILE SIZE: %d Bytes\n", stat.size);
   cprintf("DIRECT BLOCK INFO:\n");
-  for(int i = 0 ; i < NDIRECT ; i++)
-  {
+
+  for(int i = 0; i < NDIRECT; i++){
     if(ip->addrs[i] == 0)
       break;
-    if(st.type == 4)
-    {
+    if(stat.type == 4){
       int addr = ip->addrs[i] >> 8;
-      int bn = ip->addrs[i] & 0xFF;
+      int bn = ip->addrs[i] & 255;
       cprintf("[%d] %d (num: %d, length: %d)\n", i, ip->addrs[i], addr, bn);
     }
     else
