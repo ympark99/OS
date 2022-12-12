@@ -300,7 +300,7 @@ sys_open(void)
   if(omode & O_CREATE){
     // T_CS
     if(omode & O_CS){
-      ip = create(path, T_CS, 0, 0);  
+      ip = create(path, T_CS, 0, 0);
     }
     else ip = create(path, T_FILE, 0, 0);
     if(ip == 0){
@@ -446,5 +446,60 @@ sys_pipe(void)
   }
   fd[0] = fd0;
   fd[1] = fd1;
+  return 0;
+}
+
+int
+sys_printinfo(void)
+{
+  int fd;
+  char *fname, ftype[5] = "";
+  struct file *f;
+  struct stat st;
+  struct inode *ip;
+
+  if(argfd(0, &fd, &f) < 0 || argstr(1, &fname) < 0)
+    return -1;
+  
+  if(filestat(f, &st) < 0)
+    return -1;
+  
+  ip = f->ip;
+  switch(st.type)
+  {
+    case 1 :
+      strncpy(ftype, "DIR", 3); // memmove
+      break;
+    case 2 :
+      strncpy(ftype, "FILE", 4);
+      break;
+    case 3 :
+      strncpy(ftype, "DEV", 3);
+      break;
+    case 4 :
+      strncpy(ftype, "CS", 2);
+      break;
+    default :
+      return -1;
+  }
+
+  cprintf("FILE NAME: %s\n", fname);
+  cprintf("INODE NUM: %d\n", st.ino);
+  cprintf("FILE TYPE: %s\n", ftype);
+  cprintf("FILE SIZE: %d Bytes\n", st.size);
+  cprintf("DIRECT BLOCK INFO:\n");
+  for(int i = 0 ; i < NDIRECT ; i++)
+  {
+    if(ip->addrs[i] == 0)
+      break;
+    if(st.type == 4)
+    {
+      int addr = ip->addrs[i] >> 8;
+      int bn = ip->addrs[i] & 0xFF;
+      cprintf("[%d] %d (num: %d, length: %d)\n", i, ip->addrs[i], addr, bn);
+    }
+    else
+      cprintf("[%d] %d\n", i, ip->addrs[i]); 
+  }
   return 0;
 }
