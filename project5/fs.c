@@ -369,50 +369,61 @@ iunlockput(struct inode *ip)
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
-#define ADDR_3B(addr) (addr >> (32-8))
-#define ADDR_1B(addr) (addr >> (32-24))
+#define COMBINE_ADDR(addr, num) (addr << 8) + num
 
 static uint
 bmap(struct inode *ip, uint bn)
 {
-  uint addr, *a, bn_cnt = 0;
+  uint addr, *a;
   struct buf *bp;
+  
+  int i;
+  uint balloc_cnt = 0; // 블록 할당 카운터
 
-  if(ip->type == T_CS) {
-    for(int i = 0 ; i < NDIRECT ; i++){
+  if(ip->type == T_CS){
+    addr = 0;
+    for(i = 0 ; i < NDIRECT; i++){
+      // 할당된 비트 수 모두 더함
       if((addr = ip->addrs[i]) != 0){
-        bn_cnt += (addr & 0xFF);
+        balloc_cnt += (addr & 255);
       }
     }
-    if(bn_cnt > bn){
-      for(int i = 0 ; i < NDIRECT ; i++){
+    // 이미 할당된 블록
+    if(balloc_cnt > bn){
+      for(i = 0 ; i < NDIRECT; i++){
         if((addr = ip->addrs[i]) != 0){
-          if(bn <= 0xFF)
-            return (addr >> 8) + bn;
+          if(bn > 255)
+            bn -= (addr & 255);
           else
-            bn -= (addr & 0xFF);
+            return (addr >> 8) + bn; // 3바이트 addr + 연속된 블록
         }
       }
-    }else{
-      for(int i = 0 ; i < NDIRECT ; i++) {
-        if((addr = ip->addrs[i]) == 0) {
+    }
+    // 이미 할당된 블록 x
+    else{
+      for(i = 0 ; i < NDIRECT; i++){
+        if((addr = ip->addrs[i]) == 0){
           addr = balloc(ip->dev);
-          ip->addrs[i] = (addr << 8) + 1;
+          ip->addrs[i] = COMBINE_ADDR(addr, 1);
           return addr;
-        }else{
-          if(ip->addrs[i+1] == 0 && (ip->addrs[i] & 0xFF) < 0xFF) {
-            addr = balloc(ip->dev);
-            if((ip->addrs[i] >> 8) + (ip->addrs[i] & 0xFF) != addr)
-              ip->addrs[i+1] = (addr << 8) + 1;
-            else
-              ip->addrs[i] += 1;
-            return addr;
+        }
+        else{
+          if((ip->addrs[i] & 255) < 255){
+            if(ip->addrs[i+1] == 0){
+              addr = balloc(ip->dev);
+              if((ip->addrs[i] >> 8) + (ip->addrs[i] & 255) != addr)
+                ip->addrs[i+1] = COMBINE_ADDR(addr, 1);
+              else
+                ip->addrs[i] += 1;
+              return addr;
+            }
           }
         }
       }
     }
     panic("bmap: out of CS range");
-  }else{
+  }
+  else{
     if(bn < NDIRECT){
       if((addr = ip->addrs[bn]) == 0)
         ip->addrs[bn] = addr = balloc(ip->dev);
@@ -451,12 +462,12 @@ itrunc(struct inode *ip)
   uint *a;
 
   if(ip->type == T_CS){
-    for(i = 0 ; i < NDIRECT ; i++){
+    for(i = 0 ; i < NDIRECT; i++){
       if(ip->addrs[i]){
-        int addr = ip->addrs[i] >> 8;
-        int bn = ip->addrs[i] & 0xFF;
+        int bstart = ip->addrs[i] >> 8;
+        int bn = ip->addrs[i] & 255;
         for(int j = 0 ; j < bn ; j++)
-          bfree(ip->dev, addr + j);
+          bfree(ip->dev, bstart + j);
         ip->addrs[i] = 0;
       }
     }
