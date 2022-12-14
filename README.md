@@ -8,3 +8,4 @@
 2. 시스템 콜 추가 디버깅 trace 기능 구현
 3. ssu 스케줄러 구현 및 디버깅 기능 구현
 4. 7가지 page 교체 알고리즘 구현 및 page fault 측정, optimal 알고리즘과 비교
+5. CS기반 File System 
